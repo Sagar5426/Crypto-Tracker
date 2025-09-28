@@ -11,8 +11,8 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		4579C5952E3A1ED200C447A9 /* CrytoTracker.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; name = CrytoTracker.app; path = "/Users/sagarjangra/Documents/X-Code All Projects/CrytoTracker/build/Debug-iphoneos/CrytoTracker.app"; sourceTree = "<absolute>"; };
 		45AC243B2E8916740059279D /* ObservableBootcamp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ObservableBootcamp.swift; sourceTree = "<group>"; };
+		45B438442E894416005778D8 /* CrytoTracker.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CrytoTracker.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -39,6 +39,7 @@
 			children = (
 				4579C5972E3A1ED200C447A9 /* CrytoTracker */,
 				45AC243B2E8916740059279D /* ObservableBootcamp.swift */,
+				45B438442E894416005778D8 /* CrytoTracker.app */,
 			);
 			sourceTree = "<group>";
 		};
@@ -64,7 +65,7 @@
 			packageProductDependencies = (
 			);
 			productName = CrytoTracker;
-			productReference = 4579C5952E3A1ED200C447A9 /* CrytoTracker.app */;
+			productReference = 45B438442E894416005778D8 /* CrytoTracker.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */

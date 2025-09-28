@@ -16,6 +16,7 @@ class HomeViewModel: ObservableObject {
     
     private let coinDataService = CoinDataService()
     private let marketDataService = MarketDataService()
+    private let portfolioDataService = PortfolioDataService()
     private var cancellables = Set<AnyCancellable>()
     
     
@@ -23,8 +24,9 @@ class HomeViewModel: ObservableObject {
         addSubscribers()
         }
     
-    // updates allCoins
+    
     func addSubscribers() {
+        // updates allCoins
         $searchText
             //using .combineLatest we are subcribing to 2 publisher at same time
             .combineLatest(coinDataService.$allCoins)
@@ -35,6 +37,7 @@ class HomeViewModel: ObservableObject {
             }
             .store(in: &cancellables)
         
+        // updates marketData
         marketDataService.$marketData
             .map(mapGlobalMarketData)
             .sink { [weak self] (returnedStats) in
@@ -42,9 +45,31 @@ class HomeViewModel: ObservableObject {
             }
             .store(in: &cancellables)
         
+        // updates portfolioCoins
+        $allCoins
+            .combineLatest(portfolioDataService.$savedEntities)
+            .map { (coinModels, portfolioEntities) -> [CoinModel] in
+                coinModels
+                    .compactMap { (coin) -> CoinModel? in
+                    guard let entity = portfolioEntities.first(where: { $0.coinID == coin.id }) else {
+                        return nil
+                    }
+                    return coin.updateHoldings(amount: entity.amount)
+                }
+                
+            }
+            .sink { [weak self] (returnedCoins) in
+                self?.portfolioCoins = returnedCoins
+            }
+            .store(in: &cancellables)
+        
         }
     
-    /// Helper func
+    // MARK: Helper func
+    
+    func updatePortfolio(coin: CoinModel, amount: Double) {
+        portfolioDataService.updatePortfolio(coin: coin, amount: amount)
+    }
     
     // filter data based on searchText else return all Coins
     private func filterCoins(text: String, coins: [CoinModel]) -> [CoinModel] {
