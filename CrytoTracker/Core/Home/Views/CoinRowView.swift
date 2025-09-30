@@ -21,8 +21,6 @@ struct CoinRowView: View {
             rightColumn
         }
         .font(.subheadline)
-        // problem: when we applied custom segue we are unable to click at center of row to go on next screen to make whole row clickable we added background color ->(core logic just to make while row clickable <--> it's a great hack)
-        .background(Color.theme.background.opacity(0.0001))
     }
 }
 

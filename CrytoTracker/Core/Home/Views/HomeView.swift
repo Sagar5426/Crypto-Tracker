@@ -14,55 +14,54 @@ struct HomeView: View {
     @State private var showPortolioViewSheet = false // for newSheet
     
     
-    /// We havent used Navigation link directly because swiftUI does not have LazyNavigationLInk and normal one consumes lot of memory bcz it preloads every destination View
-    /// That's why in background of zStack we creating segue using two var selectedCoin and also ensures that showDetailView is true for toggling
-    @State private var selectedCoin: CoinModel? = nil
-    @State private var showDetailView: Bool = false
-    
     var body: some View {
-        ZStack {
-            // background layer
-            Color.theme.background
-                .ignoresSafeArea()
-                .sheet(isPresented: $showPortolioViewSheet) {
-                    // sheets are a new environment so if we want to use current view environment we need to manually pass it in sheet
-                    PortfolioView()
-                        .environmentObject(vm)
-                }
-            
-            // content layer
-            VStack {
-                homeHeader
-                HomeStatsView(showPortfolio: $showPortfolio)
-                SearchBarView(searchText: $vm.searchText)
-                columnTitles
+        // The NavigationStack now handles the navigation flow.
+        NavigationStack {
+            ZStack {
+                // background layer
+                Color.theme.background
+                    .ignoresSafeArea()
+                    .sheet(isPresented: $showPortolioViewSheet) {
+                        // sheets are a new environment so if we want to use current view environment we need to manually pass it in sheet
+                        PortfolioView()
+                            .environmentObject(vm)
+                    }
                 
-                if !showPortfolio {
-                    allCoinsList
-                        .transition(.move(edge: .leading))
+                // content layer
+                VStack {
+                    homeHeader
+                    HomeStatsView(showPortfolio: $showPortfolio)
+                    SearchBarView(searchText: $vm.searchText)
+                    columnTitles
+                    
+                    if !showPortfolio {
+                        allCoinsList
+                            .transition(.move(edge: .leading))
+                    }
+                    if showPortfolio {
+                        portfolioCoinsList
+                            .transition(.move(edge: .trailing))
+                    }
+                    Spacer(minLength: 0)
                 }
-                if showPortfolio {
-                    portfolioCoinsList
-                        .transition(.move(edge: .trailing))
-                }
-                Spacer(minLength: 0)
+            }
+            // This modifier handles which view to show when a CoinModel is passed to a NavigationLink.
+            // This is the modern, lazy-loading approach.
+            .navigationDestination(for: CoinModel.self) { coin in
+                // We use .constant here because DetailLoadingView expects a Binding,
+                // and the coin from the navigation destination is immutable.
+                DetailLoadingView(coin: .constant(coin))
             }
         }
-        .background(
-            NavigationLink(destination: DetailLoadingView(coin: $selectedCoin),
-                           isActive: $showDetailView,
-                           label: {EmptyView()})
-        )
+        // The old, deprecated NavigationLink in the background has been removed.
     }
 }
 
 #Preview {
-    NavigationStack {
-        HomeView()
-            .toolbar(.hidden, for: .navigationBar)
-            
-    }
-    .environmentObject(HomeViewModel())
+    // The NavigationStack is now inside HomeView, so we don't need it here.
+    HomeView()
+        .toolbar(.hidden, for: .navigationBar)
+        .environmentObject(HomeViewModel())
 }
 
 extension HomeView {
@@ -95,16 +94,24 @@ extension HomeView {
                     }
                 }
         }
+        .padding(.horizontal)
     }
     
     private var allCoinsList: some View {
         List {
             ForEach(vm.allCoins) { coin in
-                CoinRowView(coin: coin, showHoldingColumn: false)
-                    .listRowInsets(.init(top: 10, leading: 0, bottom: 10, trailing: 10))
-                    .onTapGesture {
-                        segue(coin: coin)
-                    }
+                // Use a ZStack to overlay an invisible NavigationLink
+                ZStack {
+                    // Your custom row view is the background
+                    CoinRowView(coin: coin, showHoldingColumn: false)
+                    
+                    // The NavigationLink is an invisible layer on top
+                    NavigationLink(value: coin) {
+                        EmptyView()
+                        }
+                    .opacity(0)
+                }
+                .listRowInsets(.init(top: 10, leading: 0, bottom: 10, trailing: 10))
             }
         }
         .listStyle(PlainListStyle())
@@ -113,20 +120,28 @@ extension HomeView {
     private var portfolioCoinsList: some View {
         List {
             ForEach(vm.portfolioCoins) { coin  in
-                CoinRowView(coin: coin, showHoldingColumn: true)
-                    .listRowInsets(.init(top: 10, leading: 0, bottom: 10, trailing: 10))
-                    .onTapGesture {
-                        segue(coin: coin)
-                    }
+                
+                // Use a ZStack to overlay an invisible NavigationLink
+                ZStack {
+                    // Your custom row view is the background
+                    CoinRowView(coin: coin, showHoldingColumn: true)
+                    
+                    // The NavigationLink is an invisible layer on top
+                    NavigationLink(value: coin) {
+                        EmptyView()
+                        }
+                    .opacity(0)
+                }
             }
         }
         .listStyle(PlainListStyle())
     }
     
-    private func segue(coin: CoinModel) {
-        selectedCoin = coin
-        showDetailView.toggle()
-    }
+    // The segue function is no longer needed as NavigationStack handles the navigation state.
+    // private func segue(coin: CoinModel) {
+    //     selectedCoin = coin
+    //     showDetailView.toggle()
+    // }
     
     private var columnTitles: some View {
         HStack {
