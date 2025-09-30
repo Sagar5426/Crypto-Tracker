@@ -16,7 +16,7 @@ class CoinDataService {
         getCoins()
     }
     
-    private func getCoins() {
+    func getCoins() {
                 
         guard let url = NetworkingManager.buildUrl() else {
                     print("Failed to construct final URL.")
