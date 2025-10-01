@@ -6,12 +6,7 @@
 	objectVersion = 77;
 	objects = {
 
-/* Begin PBXBuildFile section */
-		45AC243C2E8916770059279D /* ObservableBootcamp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45AC243B2E8916740059279D /* ObservableBootcamp.swift */; };
-/* End PBXBuildFile section */
-
 /* Begin PBXFileReference section */
-		45AC243B2E8916740059279D /* ObservableBootcamp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ObservableBootcamp.swift; sourceTree = "<group>"; };
 		45B438442E894416005778D8 /* CrytoTracker.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CrytoTracker.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -38,7 +33,6 @@
 			isa = PBXGroup;
 			children = (
 				4579C5972E3A1ED200C447A9 /* CrytoTracker */,
-				45AC243B2E8916740059279D /* ObservableBootcamp.swift */,
 				45B438442E894416005778D8 /* CrytoTracker.app */,
 			);
 			sourceTree = "<group>";
@@ -117,7 +111,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				45AC243C2E8916770059279D /* ObservableBootcamp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
