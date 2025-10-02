@@ -22,6 +22,8 @@ struct DetailLoadingView : View {
 
 struct DetailView: View {
     @StateObject var vm: DetailViewModel
+    private let columns: [GridItem] = [GridItem(.flexible()), GridItem(.flexible())]
+    private let spacing: CGFloat = 20.0
     
     init(coin: CoinModel) {
         self._vm = StateObject(wrappedValue: DetailViewModel(coin: coin))
@@ -30,10 +32,67 @@ struct DetailView: View {
     
     var body: some View {
         
-        Text("Hello")
+        ScrollView {
+            VStack(spacing: 20) {
+                Text("dsad")
+                    .frame(height: 150)
+                OverviewTitle
+                Divider()
+                overviewGrid
+                
+                additionalTitle
+                Divider()
+                additionalGrid
+            }
+        }
+        .navigationTitle(vm.coin.name)
+        
     }
 }
 
 #Preview {
-    DetailView(coin:DeveloperPreview.instance.coin)
+    NavigationStack {
+        DetailView(coin:DeveloperPreview.instance.coin)
+    }
+}
+
+extension DetailView {
+    private var OverviewTitle: some View {
+        Text("Overview")
+            .font(.title).bold()
+            .foregroundStyle(Color.theme.accent)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding()
+    }
+    
+    private var additionalTitle : some View {
+        Text("Additional Details")
+            .font(.title).bold()
+            .foregroundStyle(Color.theme.accent)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding()
+    }
+    
+    private var overviewGrid : some View {
+        LazyVGrid(columns: columns,
+                  alignment: .leading,
+                  spacing: spacing,
+                  pinnedViews: []) {
+            ForEach(vm.overviewStatistics) { stat in
+                StatisticsView(stat: stat)
+            }
+        }.padding(.horizontal)
+    }
+    
+    private var additionalGrid: some View {
+        LazyVGrid(columns: columns,
+                  alignment: .leading,
+                  spacing: spacing,
+                  pinnedViews: []) {
+            ForEach(vm.additionalStatistics) { stat in
+                StatisticsView(stat: stat)
+            }
+        }
+                  .padding(.horizontal)
+    }
 }
