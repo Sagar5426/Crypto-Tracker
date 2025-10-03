@@ -12,6 +12,7 @@ struct HomeView: View {
     @EnvironmentObject private var vm: HomeViewModel
     @State private var showPortfolio = false // for animate right
     @State private var showPortolioViewSheet = false // for newSheet
+    @State private var showSettingsView = false // new sheet
     
     
     var body: some View {
@@ -44,6 +45,9 @@ struct HomeView: View {
                     }
                     Spacer(minLength: 0)
                 }
+                .sheet(isPresented: $showSettingsView) {
+                    SettingsView()
+                }
             }
             // This modifier handles which view to show when a CoinModel is passed to a NavigationLink.
             // This is the modern, lazy-loading approach.
@@ -72,6 +76,8 @@ extension HomeView {
                 .onTapGesture {
                     if showPortfolio {
                         showPortolioViewSheet.toggle()
+                    } else {
+                        showSettingsView.toggle()
                     }
                 }
                 .background(
