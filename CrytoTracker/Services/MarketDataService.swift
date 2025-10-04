@@ -33,6 +33,7 @@ class MarketDataService {
         // Instead Set<AnyCancellable> we are storing each coin seperately so it becomes easy to identify when we want to cancel our subscription
         marketDataSubscription = NetworkingManager.download(url: url)
             .decode(type: GlobalDataModel.self, decoder: JSONDecoder())
+            .receive(on: DispatchQueue.main)
             .sink(receiveCompletion: NetworkingManager.handleCompletion, receiveValue: { [weak self] (returnedGlobalData) in
                 self?.marketData = returnedGlobalData.data
                 self?.marketDataSubscription?.cancel() // cancelling bcz making only one request (dummy data)

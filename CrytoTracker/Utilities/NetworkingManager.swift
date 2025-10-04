@@ -24,11 +24,13 @@ class NetworkingManager {
     
     // Made with this func so we dont write same code again(using this as shorcut code)
     // AnyPublisher makes it generic(special feature of combine)
+    
+    // Note: dataTaskPublisher by default on subscribe BG thread (.subscribe is useless to write just written for understanding purposes)
     static func download(url: URL) -> AnyPublisher<Data, Error> {
         return URLSession.shared.dataTaskPublisher(for: url)
             .subscribe(on: DispatchQueue.global(qos: .default))
             .tryMap { try handleURLResponse(output: $0, url: url) }
-            .receive(on: DispatchQueue.main)
+            .retry(3) // only if we dont receive data try again
             .eraseToAnyPublisher()
     }
     

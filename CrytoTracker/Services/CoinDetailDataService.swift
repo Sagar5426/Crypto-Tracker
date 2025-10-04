@@ -29,6 +29,7 @@ class CoinDetailDataService {
         // Instead Set<AnyCancellable> we are storing each coin seperately so it becomes easy to identify when we want to cancel our subscription
         coinDetailSubscription = NetworkingManager.download(url: url)
             .decode(type: CoinDetailModel.self, decoder: JSONDecoder())
+            .receive(on: DispatchQueue.main)
             .sink(receiveCompletion: NetworkingManager.handleCompletion, receiveValue: { [weak self] (returnedCoinDetails) in
                 self?.coinDetails = returnedCoinDetails
                 self?.coinDetailSubscription?.cancel() // cancelling bcz making only one request (dummy data)

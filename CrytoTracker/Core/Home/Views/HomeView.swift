@@ -40,8 +40,14 @@ struct HomeView: View {
                             .transition(.move(edge: .leading))
                     }
                     if showPortfolio {
-                        portfolioCoinsList
-                            .transition(.move(edge: .trailing))
+                        ZStack(alignment: .top) {
+                            if vm.portfolioCoins.isEmpty && vm.searchText.isEmpty {
+                                portfolioEmptyText
+                            } else {
+                                portfolioCoinsList
+                            }
+                        }
+                         .transition(.move(edge: .trailing))
                     }
                     Spacer(minLength: 0)
                 }
@@ -141,6 +147,15 @@ extension HomeView {
             }
         }
         .listStyle(PlainListStyle())
+    }
+    
+    private var portfolioEmptyText: some View {
+        Text("You havent added any coins to your portfolio. Click on + button to get started! 🧐")
+            .font(.callout)
+            .foregroundStyle(Color.theme.accent)
+            .fontWeight(.medium)
+            .multilineTextAlignment(.center)
+            .padding(50)
     }
     
     // The segue function is no longer needed as NavigationStack handles the navigation state.
