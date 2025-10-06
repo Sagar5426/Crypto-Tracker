@@ -144,23 +144,36 @@ class HomeViewModel: ObservableObject {
         let volume = StatisticModel(title: "24h Volume", value: data.volume)
         let btcDominance = StatisticModel(title: "BTC Dominance", value: data.btcDominance)
         
-        // .reduce sum the array double that we receive in portfolioValue and returns single double
-        let portfolioValue = portfolioCoins.map( {$0.currentHoldingsValue} )
+        let portfolioValue = portfolioCoins
+            .map { $0.currentHoldingsValue }
             .reduce(0, +)
         
-        let previousValue =
-        portfolioCoins
-            .map { (coin) -> Double in
-                let currentValue = coin.currentHoldingsValue
-                let percentChange = (coin.priceChangePercentage24H ?? 0) / 100
-                // growth formula:
-                let previousValue = currentValue / (1 + percentChange)
-                return previousValue
-            }.reduce(0, +)
+        let previousValue = portfolioCoins
+            .map { coin -> Double in
+                let pct = (coin.priceChangePercentage24H ?? 0) / 100
+                // Guard against -100% (division by zero)
+                guard pct > -1 else {
+                    // Option A: treat as a total wipeout previously (previous = 0)
+                    return 0
+                    // Option B: skip coin (return 0 and rely on others)
+                    // return 0
+                    // Option C: treat as undefined and fallback to current (less accurate)
+                    // return coin.currentHoldingsValue
+                }
+                return coin.currentHoldingsValue / (1 + pct)
+            }
+            .reduce(0, +)
         
-        let percentageChange = ((portfolioValue - previousValue) / previousValue)
+        // Avoid dividing by zero when previousValue == 0
+        let percentageChange: Double? = previousValue > 0
+            ? (portfolioValue - previousValue) / previousValue
+            : nil // or 0 if you prefer a defined default
         
-        let portfolio = StatisticModel(title: "Portfolio Value", value: portfolioValue.asCurrencyWith2Decimals(), percentageChange: percentageChange)
+        let portfolio = StatisticModel(
+            title: "Portfolio Value",
+            value: portfolioValue.asCurrencyWith2Decimals(),
+            percentageChange: percentageChange
+        )
         
         stats.append(contentsOf: [marketCap, volume, btcDominance, portfolio])
         
