@@ -66,4 +66,25 @@ class LocalFileManager {
         
         return url.appendingPathComponent(imageName + ".png")
     }
+    
+    func clearFolder(folderName: String) {
+        guard let url = getUrlForFolder(folderName: folderName) else { return }
+        do {
+            if FileManager.default.fileExists(atPath: url.path) {
+                let items = try FileManager.default.contentsOfDirectory(at: url, includingPropertiesForKeys: nil)
+                for item in items {
+                    try FileManager.default.removeItem(at: item)
+                }
+            }
+        } catch {
+            print("Error clearing folder \(folderName): \(error)")
+        }
+    }
+    
+    func getFolderItemCount(folderName: String) -> Int {
+        guard let url = getUrlForFolder(folderName: folderName),
+              FileManager.default.fileExists(atPath: url.path) else { return 0 }
+        let items = (try? FileManager.default.contentsOfDirectory(at: url, includingPropertiesForKeys: nil)) ?? []
+        return items.count
+    }
 }
