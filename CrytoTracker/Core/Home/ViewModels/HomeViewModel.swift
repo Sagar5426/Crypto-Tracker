@@ -16,9 +16,51 @@ class HomeViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var sortOption: SortOption = .holdings
     
+    @Published var portfolioTotalValue: Double = 0
+    @Published var portfolioProfit24H: Double = 0
+    @Published var portfolioProfitPercentage24H: Double = 0
+    @Published var marketCategory: MarketCategory = .all
+    @Published var watchlistCoinIDs: Set<String> = []
+    
+    enum MarketCategory: String, CaseIterable, Identifiable {
+        case all = "All"
+        case gainers = "Gainers"
+        case losers = "Losers"
+        case topTen = "Top 10"
+        var id: String { rawValue }
+    }
+    
+    var displayedCoins: [CoinModel] {
+        switch marketCategory {
+        case .all:
+            return allCoins
+        case .gainers:
+            return allCoins.filter { ($0.priceChangePercentage24H ?? 0) > 0 }
+                .sorted(by: { ($0.priceChangePercentage24H ?? 0) > ($1.priceChangePercentage24H ?? 0) })
+        case .losers:
+            return allCoins.filter { ($0.priceChangePercentage24H ?? 0) < 0 }
+                .sorted(by: { ($0.priceChangePercentage24H ?? 0) < ($1.priceChangePercentage24H ?? 0) })
+        case .topTen:
+            return Array(allCoins.prefix(10))
+        }
+    }
+    
+    var watchlistCoins: [CoinModel] {
+        allCoins.filter { watchlistCoinIDs.contains($0.id) }
+    }
+    
+    var topMovers: [CoinModel] {
+        allCoins
+            .filter { ($0.priceChangePercentage24H ?? 0) > 0 }
+            .sorted(by: { ($0.priceChangePercentage24H ?? 0) > ($1.priceChangePercentage24H ?? 0) })
+            .prefix(6)
+            .map { $0 }
+    }
+    
     private let coinDataService = CoinDataService()
     private let marketDataService = MarketDataService()
     private let portfolioDataService = PortfolioDataService()
+    private let watchlistDataService = WatchlistDataService()
     private var cancellables = Set<AnyCancellable>()
     
     enum SortOption {
@@ -27,7 +69,7 @@ class HomeViewModel: ObservableObject {
     
     init() {
         addSubscribers()
-        }
+    }
     
     
     func addSubscribers() {
@@ -48,7 +90,9 @@ class HomeViewModel: ObservableObject {
             .map(mapAllCoinsToPortfolio)
             .sink { [weak self] (returnedCoins) in
                 guard let self = self else { return }
-                self.portfolioCoins = self.sortPortfolioCoinsIfNeeded( coins: returnedCoins)
+                let sorted = self.sortPortfolioCoinsIfNeeded(coins: returnedCoins)
+                self.portfolioCoins = sorted
+                self.updatePortfolioMetrics(coins: sorted)
             }
             .store(in: &cancellables)
         
@@ -62,12 +106,49 @@ class HomeViewModel: ObservableObject {
             }
             .store(in: &cancellables)
         
-        }
+        // updates watchlist from Core Data
+        watchlistDataService.$savedEntities
+            .sink { [weak self] (entities) in
+                self?.watchlistCoinIDs = Set(entities.compactMap { $0.coinID })
+            }
+            .store(in: &cancellables)
+    }
     
     // MARK: Helper func
     
     func updatePortfolio(coin: CoinModel, amount: Double) {
         portfolioDataService.updatePortfolio(coin: coin, amount: amount)
+    }
+    
+    func deleteHolding(coin: CoinModel) {
+        portfolioDataService.updatePortfolio(coin: coin, amount: 0)
+    }
+    
+    func portfolioShare(for coin: CoinModel) -> Double {
+        guard portfolioTotalValue > 0 else { return 0 }
+        return (coin.currentHoldingsValue / portfolioTotalValue) * 100.0
+    }
+    
+    func isWatchlisted(coin: CoinModel) -> Bool {
+        watchlistCoinIDs.contains(coin.id)
+    }
+    
+    func toggleWatchlist(coin: CoinModel) {
+        watchlistDataService.toggleWatchlist(coin: coin)
+        HapticManager.notification(type: .success)
+    }
+    
+    private func updatePortfolioMetrics(coins: [CoinModel]) {
+        let total = coins.map { $0.currentHoldingsValue }.reduce(0, +)
+        let previous = coins.map { coin -> Double in
+            let pct = (coin.priceChangePercentage24H ?? 0) / 100.0
+            guard pct > -1 else { return 0 }
+            return coin.currentHoldingsValue / (1.0 + pct)
+        }.reduce(0, +)
+        
+        self.portfolioTotalValue = total
+        self.portfolioProfit24H = total - previous
+        self.portfolioProfitPercentage24H = previous > 0 ? ((total - previous) / previous) * 100.0 : 0.0
     }
     
     func reloadData() {

@@ -4,4 +4,8 @@
         <attribute name="amount" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
         <attribute name="coinID" optional="YES" attributeType="String"/>
     </entity>
+    <entity name="WatchlistEntity" representedClassName="WatchlistEntity" syncable="YES" codeGenerationType="class">
+        <attribute name="coinID" optional="YES" attributeType="String"/>
+        <attribute name="addedDate" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+    </entity>
 </model>

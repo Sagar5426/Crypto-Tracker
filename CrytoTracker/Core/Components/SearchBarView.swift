@@ -11,34 +11,40 @@ struct SearchBarView: View {
     @Binding var searchText: String
     
     var body: some View {
-        HStack {
+        HStack(spacing: 10) {
             Image(systemName: "magnifyingglass")
-                .foregroundStyle(searchText.isEmpty ? Color.theme.secondaryText: Color.theme.accent)
+                .font(.subheadline)
+                .foregroundStyle(searchText.isEmpty ? Color.theme.secondaryText : Color.theme.accent)
             
-            TextField("Search by name or symbol", text: $searchText)
+            TextField("Search by name or symbol...", text: $searchText)
+                .font(.subheadline)
                 .foregroundStyle(Color.theme.accent)
                 .autocorrectionDisabled(true)
-                .overlay(alignment: .trailing) {
+            
+            if !searchText.isEmpty {
+                Button {
+                    UIApplication.shared.endEditing()
+                    searchText = ""
+                } label: {
                     Image(systemName: "xmark.circle.fill")
-                        .padding()
-                        .offset(x: 10, y: 0)
-                        .foregroundStyle(Color.theme.accent)
-                        .opacity(searchText.isEmpty ? 0 : 1)
-                        .onTapGesture {
-                            UIApplication.shared.endEditing()
-                            searchText = ""
-                        }
+                        .font(.subheadline)
+                        .foregroundStyle(Color.theme.secondaryText)
                 }
+                .buttonStyle(.plain)
+            }
         }
-        .font(.headline)
-        .padding()
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
         .background(
-            RoundedRectangle(cornerRadius: 25)
+            RoundedRectangle(cornerRadius: 14)
                 .fill(Color.theme.background)
-                .shadow(color: Color.theme.accent.opacity(0.15), radius: 10, x: 0, y: 0)
+                .shadow(color: Color.theme.accent.opacity(0.06), radius: 6, x: 0, y: 2)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14)
+                        .stroke(Color.theme.secondaryText.opacity(0.15), lineWidth: 1)
+                )
         )
-        .padding()
-        
+        .padding(.horizontal)
     }
 }
 

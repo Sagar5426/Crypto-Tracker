@@ -27,4 +27,25 @@ extension Date {
         return shortFormatter.string(from: self)
     }
     
+    private var mediumFormatter: DateFormatter {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .short
+        return formatter
+    }
+    
+    func asMediumDateTimeString() -> String {
+        return mediumFormatter.string(from: self)
+    }
+    
+    private var dayMonthFormatter: DateFormatter {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMM d, yyyy"
+        return formatter
+    }
+    
+    func asDayMonthYearString() -> String {
+        return dayMonthFormatter.string(from: self)
+    }
+    
 }

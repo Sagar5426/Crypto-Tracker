@@ -78,6 +78,15 @@ extension Double {
            return currencyFormatter2.string(from: number) ?? "$0.00"
        }
     
+       /// Formats price intelligently: 2 decimals if >= $1.0, 6 decimals if < $1.0
+       func asFormattedPrice() -> String {
+           if abs(self) >= 1.0 {
+               return self.asCurrencyWith2Decimals()
+           } else {
+               return self.asCurrencyWith6Decimals()
+           }
+       }
+    
     /// Convert a Double to a String with K, M, Bn, Tr abbreviations.
         /// ```
         /// Convert 12 to 12.00

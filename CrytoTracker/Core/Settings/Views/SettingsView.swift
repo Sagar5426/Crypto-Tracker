@@ -14,22 +14,26 @@ struct SettingsView: View {
     let coingeckoURL = URL(string:"https://www.coingecko.com")!
     let githubProfileURL = URL(string:"https://github.com/Sagar5426")!
     
+    var showsDismissButton: Bool = false
+    
     var body: some View {
         NavigationStack {
             List {
                 appInfoSection
                 coinGeckoSection
-             }
+                appPreferencesSection
+            }
             .tint(.blue)
             .listStyle(.grouped)
             .navigationTitle("Settings")
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    xMarkButton()
+                if showsDismissButton {
+                    ToolbarItem(placement: .topBarLeading) {
+                        xMarkButton()
+                    }
                 }
             }
         }
-        
     }
 }
 
@@ -99,6 +103,33 @@ extension SettingsView {
                     .foregroundStyle(.blue.opacity(0.6))
             }
             .padding(.vertical, 6)
+        }
+    }
+    
+    private var appPreferencesSection: some View {
+        Section {
+            HStack {
+                Text("API Status")
+                Spacer()
+                HStack(spacing: 6) {
+                    Circle()
+                        .fill(Color.green)
+                        .frame(width: 8, height: 8)
+                    Text("Operational")
+                        .font(.subheadline)
+                        .foregroundStyle(Color.theme.secondaryText)
+                }
+            }
+            
+            HStack {
+                Text("App Version")
+                Spacer()
+                Text("2.0.0 (SwiftUI)")
+                    .font(.subheadline)
+                    .foregroundStyle(Color.theme.secondaryText)
+            }
+        } header: {
+            Text("Application".uppercased())
         }
     }
 }

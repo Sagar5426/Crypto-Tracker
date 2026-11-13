@@ -21,11 +21,8 @@ struct CrytoTrackerApp: App {
     var body: some Scene {
         WindowGroup {
             ZStack {
-                NavigationStack {
-                    HomeView()
-                        .toolbarVisibility(.hidden, for: .navigationBar)
-                }
-                .environmentObject(vm)
+                MainTabView()
+                    .environmentObject(vm)
                 
                 // Added additional ZStack to avoid animation bug while transitioning
                 ZStack {

@@ -15,9 +15,12 @@ struct StatisticsView: View {
             Text(stat.title)
                 .font(.caption)
                 .foregroundStyle(Color.theme.secondaryText)
+                .lineLimit(1)
             Text(stat.value)
                 .font(.headline)
                 .foregroundStyle(Color.theme.accent)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
             
             HStack(spacing: 4) {
                 Image(systemName: "triangle.fill")
@@ -29,6 +32,8 @@ struct StatisticsView: View {
                 Text(stat.percentageChange?.asPercentString() ?? "")
                     .font(.caption)
                     .bold()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
             }
             .foregroundStyle((stat.percentageChange ?? 0) >= 0 ? Color.theme.green : Color.theme.red)
             .opacity(stat.percentageChange == nil ? 0 : 1)
