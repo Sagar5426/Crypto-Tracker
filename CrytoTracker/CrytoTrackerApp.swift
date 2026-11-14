@@ -34,6 +34,7 @@ struct CrytoTrackerApp: App {
                 }
                 .zIndex(2.0)
             }
+            .dynamicTypeSize(.large)
         }
     }
 }

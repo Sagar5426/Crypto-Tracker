@@ -49,6 +49,7 @@ struct MainTabView: View {
                 .tag(AppTab.settings)
         }
         .tint(Color.theme.accent)
+        .dynamicTypeSize(.large)
     }
 }
 
