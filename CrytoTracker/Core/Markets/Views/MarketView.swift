@@ -14,24 +14,38 @@ struct MarketView: View {
     @State private var showSearchBar: Bool = false
     @State private var selectedCoinForDetail: CoinModel? = nil
     @State private var scrollViewOffset: CGFloat = 0
+    @State private var topSafeAreaInset: CGFloat = 59
+    @State private var topSectionHeight: CGFloat = 160
     
     var body: some View {
         NavigationStack {
-            GeometryReader { geometry in
-                ZStack(alignment: .top) {
-                    Color.theme.background
-                        .ignoresSafeArea()
-                    
-                    // Dynamic ambient crypto gradient glow that scrolls synchronously with content
-                    backGroundGradientLayer
-                    
-                    // Scrollable content with collapsible top header & stats, plus sticky filter chips
-                    scrollViewLayer
-                    
-                    // Top safe area cover that masks content scrolling into status bar area
-                    topSafeAreaCover(topInset: geometry.safeAreaInsets.top)
-                }
+            ZStack(alignment: .top) {
+                // Base background
+                Color.black
+                    .ignoresSafeArea()
+                
+                // Dynamic ambient crypto gradient glow that scrolls synchronously & fades out together
+                backGroundGradientLayer
+                
+                // Scrollable content with collapsible top header & stats, plus sticky filter chips
+                scrollViewLayer
             }
+            .background(
+                // Capture exact top safe area inset for the device
+                GeometryReader { geo in
+                    Color.clear
+                        .onAppear {
+                            if geo.safeAreaInsets.top > 0 {
+                                topSafeAreaInset = geo.safeAreaInsets.top
+                            }
+                        }
+                        .onChange(of: geo.safeAreaInsets.top) { _, newValue in
+                            if newValue > 0 {
+                                topSafeAreaInset = newValue
+                            }
+                        }
+                }
+            )
             .toolbar(.hidden, for: .navigationBar)
             .fullScreenCover(item: $selectedCoinForDetail) { coin in
                 NavigationStack {
@@ -45,33 +59,42 @@ struct MarketView: View {
 // MARK: - Layout & Layers
 extension MarketView {
     
-    // MARK: - Opacity Calculations (Fade Animation)
-    private var headerOpacity: Double {
-        if scrollViewOffset >= 0 { return 1.0 }
-        return max(0.0, 1.0 + Double(scrollViewOffset / 70.0))
+    // MARK: - Unified Collapse & Staged Fade Progress
+    /// Progress from 0.0 (fully expanded at top) to 1.0 (fully collapsed and pinned)
+    private var collapseProgress: Double {
+        guard scrollViewOffset < 0 else { return 0.0 }
+        let collapseDistance = max(1.0, topSectionHeight - 10)
+        return min(1.0, Double(-scrollViewOffset / collapseDistance))
     }
     
-    private var marketStatsOpacity: Double {
-        if scrollViewOffset >= -15 { return 1.0 }
-        return max(0.0, 1.0 + Double((scrollViewOffset + 15) / 95.0))
+    /// Top Header fades out earlier (0% -> 55%) so it never clashes with the status bar
+    private var headerFadeOpacity: Double {
+        let progress = min(1.0, max(0.0, collapseProgress / 0.55))
+        return 1.0 - (progress * progress)
     }
     
-    /// Progress (0.0 to 1.0) of header and market stats fading out and filter chips becoming pinned
-    private var stickyProgress: Double {
-        if scrollViewOffset >= -30 { return 0.0 }
-        if scrollViewOffset <= -110 { return 1.0 }
-        return Double((-scrollViewOffset - 30.0) / 80.0)
+    /// MarketStatsView fades out smoothly (15% -> 92%) as filter chips approach the top
+    private var statsFadeOpacity: Double {
+        let progress = min(1.0, max(0.0, (collapseProgress - 0.15) / 0.77))
+        return 1.0 - progress
     }
     
-    // MARK: - Top Safe Area Cover (Blocks scrolling data behind status bar)
-    private func topSafeAreaCover(topInset: CGFloat) -> some View {
-        Color.theme.background
-            .opacity(stickyProgress)
-            .frame(height: topInset)
-            .ignoresSafeArea(edges: .top)
+    /// Overall opacity for ambient background gradient
+    private var contentFadeOpacity: Double {
+        max(0.0, 1.0 - collapseProgress)
     }
     
-    // MARK: - Ambient Gradient Layer (Moves synchronously with scroll)
+    /// Solid background opacity for the filter chips row itself (reaches 1.0 before pinning)
+    private var chipRowBackgroundOpacity: Double {
+        min(1.0, max(0.0, collapseProgress / 0.80))
+    }
+    
+    /// Safe-area extension opacity (activates only as MarketStatsView finishes fading so it never overlaps it)
+    private var safeAreaCoverOpacity: Double {
+        min(1.0, max(0.0, (collapseProgress - 0.75) / 0.20))
+    }
+    
+    // MARK: - Ambient Gradient Layer (Moves synchronously with scroll & fades out together)
     private var backGroundGradientLayer: some View {
         ZStack {
             // Multi-stop linear gradient for rich ambient background fade
@@ -113,6 +136,48 @@ extension MarketView {
         .ignoresSafeArea(edges: .top)
         .frame(height: 380 + max(0, scrollViewOffset))
         .offset(y: min(0, scrollViewOffset))
+        .opacity(contentFadeOpacity)
+        .allowsHitTesting(false)
+    }
+    
+    // MARK: - Collapsible Top Section (Header + Global Stats)
+    private var topCollapsibleSection: some View {
+        VStack(spacing: 14) {
+            // 1. Collapsible Top Header
+            HeaderView(
+                title: "Markets",
+                showSearchBar: $showSearchBar,
+                searchText: $vm.searchText,
+                isLoading: vm.isLoading,
+                onRefresh: {
+                    vm.reloadData()
+                }
+            )
+            .opacity(headerFadeOpacity)
+            .scaleEffect(1.0 - (collapseProgress * 0.03), anchor: .top)
+            .offset(y: min(0, -scrollViewOffset * 0.15))
+            
+            // 2. Collapsible Global Market Overview Card
+            MarketStatsView(showPortfolio: .constant(false))
+                .opacity(statsFadeOpacity)
+                .scaleEffect(1.0 - (collapseProgress * 0.04), anchor: .top)
+        }
+        .background(
+            GeometryReader { geo in
+                Color.clear
+                    .onAppear {
+                        if geo.size.height > 0 {
+                            topSectionHeight = geo.size.height + 12
+                        }
+                    }
+                    .onChange(of: geo.size.height) { _, newHeight in
+                        if newHeight > 0 {
+                            topSectionHeight = newHeight + 12
+                        }
+                    }
+            }
+        )
+        .allowsHitTesting(collapseProgress < 0.85)
     }
     
     // MARK: - Scroll View Layer
@@ -122,41 +187,33 @@ extension MarketView {
             showsIndicators: false,
             content: {
                 LazyVStack(spacing: 12, pinnedViews: [.sectionHeaders]) {
-                    // 1. Collapsible Top Header with pure opacity fade
-                    HeaderView(
-                        title: "Markets",
-                        showSearchBar: $showSearchBar,
-                        searchText: $vm.searchText,
-                        isLoading: vm.isLoading,
-                        onRefresh: {
-                            vm.reloadData()
-                        }
-                    )
-                    .opacity(headerOpacity)
+                    // Collapsible Top Section (measured dynamically)
+                    topCollapsibleSection
+                        .zIndex(1)
                     
-                    // 2. Collapsible Global Market Overview Card with pure opacity fade
-                    MarketStatsView(showPortfolio: .constant(false))
-                        .padding(.top, 2)
-                        .opacity(marketStatsOpacity)
-                    
-                    // 3. Sticky Section: Filter chips stick at the top, below views scroll inside
+                    // Sticky Section: Filter chips stick at the top, below views scroll strictly underneath
                     Section {
                         // Top Movers strip (when in 'All' and not searching)
                         if vm.searchText.isEmpty && vm.marketCategory == .all && !vm.topMovers.isEmpty {
                             topMoversSection
+                                .zIndex(0)
                         }
                         
                         // Sticky / Flowing Column Titles
                         columnTitles
+                            .zIndex(0)
                         
                         // Coins List
                         if vm.displayedCoins.isEmpty && !vm.searchText.isEmpty {
                             noResultsView
+                                .zIndex(0)
                         } else {
                             coinsLazyList
+                                .zIndex(0)
                         }
                     } header: {
                         filterChipsRow
+                            .zIndex(10)
                     }
                 }
                 .padding(.bottom, 24)
@@ -170,7 +227,7 @@ extension MarketView {
         }
     }
     
-    // MARK: - Sticky Filter Chips Row with dynamic transparency & divider
+    // MARK: - Sticky Filter Chips Row with Non-Transparent Background
     private var filterChipsRow: some View {
         VStack(spacing: 0) {
             ScrollView(.horizontal, showsIndicators: false) {
@@ -201,12 +258,18 @@ extension MarketView {
                             .padding(.horizontal, 14)
                             .padding(.vertical, 7)
                             .background(
-                                Capsule()
-                                    .fill(isSelected ? Color.theme.accent : Color.theme.secondaryText.opacity(0.1))
+                                ZStack {
+                                    // Opaque base so individual chips are never see-through
+                                    Capsule()
+                                        .fill(Color.black)
+                                    
+                                    Capsule()
+                                        .fill(isSelected ? Color.theme.accent : Color.theme.secondaryText.opacity(0.12))
+                                }
                             )
                             .overlay(
                                 Capsule()
-                                    .stroke(isSelected ? Color.clear : Color.theme.secondaryText.opacity(0.12), lineWidth: 1)
+                                    .stroke(isSelected ? Color.clear : Color.theme.secondaryText.opacity(0.14), lineWidth: 1)
                             )
                             .foregroundStyle(isSelected ? Color.theme.background : Color.theme.secondaryText)
                         }
@@ -214,19 +277,30 @@ extension MarketView {
                     }
                 }
                 .padding(.horizontal, 16)
-                .padding(.vertical, 6)
+                .padding(.vertical, 8)
             }
             
-            // Small divider line below filter chips (fades in as header & stats fade)
+            // Divider line below filter chips
             Rectangle()
-                .fill(Color.theme.secondaryText.opacity(0.15))
+                .fill(Color.theme.secondaryText.opacity(0.22))
                 .frame(height: 1)
-                .opacity(stickyProgress)
+                .opacity(chipRowBackgroundOpacity)
         }
         .background(
-            Color.theme.background
-                .opacity(stickyProgress)
+            ZStack(alignment: .top) {
+                // 1. Solid black background strictly inside filterChipsRow bounds (never overlaps MarketStatsView)
+                Color.black
+                    .opacity(chipRowBackgroundOpacity)
+                
+                // 2. Top safe area shield that locks in as the header finishes collapsing
+                Color.black
+                    .frame(height: topSafeAreaInset + 2)
+                    .offset(y: -topSafeAreaInset)
+                    .ignoresSafeArea(edges: .top)
+                    .opacity(safeAreaCoverOpacity)
+            }
         )
+        .compositingGroup()
     }
 }
 

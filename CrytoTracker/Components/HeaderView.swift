@@ -7,6 +7,19 @@
 
 import SwiftUI
 
+extension View {
+    /// Applies Apple's native Liquid Glass effect when running on supported OS,
+    /// falling back gracefully to ultraThinMaterial blur.
+    @ViewBuilder
+    func appleGlassEffect() -> some View {
+        if #available(iOS 26.0, *) {
+            self.glassEffect(.regular)
+        } else {
+            self.background(.ultraThinMaterial)
+        }
+    }
+}
+
 struct HeaderView: View {
     let title: String
     @Binding var showSearchBar: Bool
@@ -69,7 +82,7 @@ struct HeaderView: View {
                     }
                     .buttonStyle(.plain)
                     
-                    // Search Toggle Button (kept in original top header position)
+                    // Search Toggle Button (in top header)
                     Button {
                         HapticManager.notification(type: .success)
                         withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
@@ -94,7 +107,7 @@ struct HeaderView: View {
             }
             .padding(.horizontal, 16)
             
-            // Expandable Search Bar in its original top header position
+            // Expandable Search Bar in top header
             if showSearchBar {
                 SearchBarView(searchText: $searchText)
                     .transition(.move(edge: .top).combined(with: .opacity))
