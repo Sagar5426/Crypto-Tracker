@@ -45,9 +45,21 @@ struct DetailView: View {
                 // Interactive Chart Container Card
                 chartCardSection
                 
-                // Personal Portfolio Holdings (if any)
-                if userHasHoldings {
-                    holdingsBannerCard
+                // Personal Portfolio Holdings (with real data)
+                if userHasHoldings, let holding = userHoldingCoin {
+                    CoinHoldingCard(
+                        coin: holding,
+                        onBuyTapped: {
+                            tradeTypeToOpen = .buy
+                            showPortfolioSheet.toggle()
+                            HapticManager.notification(type: .success)
+                        },
+                        onSellTapped: {
+                            tradeTypeToOpen = .sell
+                            showPortfolioSheet.toggle()
+                            HapticManager.notification(type: .success)
+                        }
+                    )
                 }
                 
                 // Market Overview Grid
@@ -227,86 +239,6 @@ extension DetailView {
         .overlay(
             RoundedRectangle(cornerRadius: 16)
                 .stroke(Color.theme.secondaryText.opacity(0.1), lineWidth: 1)
-        )
-    }
-    
-    // MARK: - User Holdings Banner
-    private var holdingsBannerCard: some View {
-        guard let holding = userHoldingCoin else { return AnyView(EmptyView()) }
-        let amount = holding.currentHoldings ?? 0
-        let value = holding.currentHoldingsValue
-        
-        return AnyView(
-            HStack(spacing: 12) {
-                ZStack {
-                    Circle()
-                        .fill(Color.theme.accent.opacity(0.1))
-                        .frame(width: 40, height: 40)
-                    Image(systemName: "briefcase.fill")
-                        .font(.subheadline)
-                        .foregroundStyle(Color.theme.accent)
-                }
-                
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Your Holdings")
-                        .font(.caption)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(Color.theme.secondaryText)
-                    
-                    Text(value.asCurrencyWith2Decimals())
-                        .font(.headline)
-                        .fontWeight(.bold)
-                        .foregroundStyle(Color.theme.accent)
-                    
-                    Text("\(amount.asNumberString()) \(vm.coin.symbol.uppercased())")
-                        .font(.caption2)
-                        .foregroundStyle(Color.theme.secondaryText)
-                }
-                
-                Spacer()
-                
-                HStack(spacing: 8) {
-                    Button {
-                        tradeTypeToOpen = .buy
-                        showPortfolioSheet.toggle()
-                        HapticManager.notification(type: .success)
-                    } label: {
-                        Text("Buy")
-                            .font(.caption)
-                            .fontWeight(.bold)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(Color.theme.green.opacity(0.15))
-                            .foregroundStyle(Color.theme.green)
-                            .clipShape(Capsule())
-                    }
-                    
-                    Button {
-                        tradeTypeToOpen = .sell
-                        showPortfolioSheet.toggle()
-                        HapticManager.notification(type: .success)
-                    } label: {
-                        Text("Sell")
-                            .font(.caption)
-                            .fontWeight(.bold)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(Color.theme.red.opacity(0.15))
-                            .foregroundStyle(Color.theme.red)
-                            .clipShape(Capsule())
-                    }
-                }
-            }
-            .padding(14)
-            .background(
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(Color.theme.background)
-                    .shadow(color: Color.theme.accent.opacity(0.04), radius: 6, x: 0, y: 2)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .stroke(Color.theme.accent.opacity(0.2), lineWidth: 1)
-            )
         )
     }
     

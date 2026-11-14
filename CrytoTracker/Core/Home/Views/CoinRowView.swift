@@ -140,7 +140,10 @@ extension CoinRowView {
     }
     
     private var rightColumn: some View {
-        VStack(alignment: .trailing, spacing: 3) {
+        let isPositive = showHoldingColumn ? (coin.profitLoss >= 0) : ((coin.priceChangePercentage24H ?? 0) >= 0)
+        let percentText = showHoldingColumn ? ((isPositive ? "+" : "") + coin.profitLossPercentage.asPercentString()) : (coin.priceChangePercentage24H?.asPercentString() ?? "0.00%")
+        
+        return VStack(alignment: .trailing, spacing: 3) {
             Text(coin.currentPrice.asFormattedPrice())
                 .font(.system(size: 14, weight: .bold))
                 .foregroundStyle(Color.theme.accent)
@@ -148,18 +151,18 @@ extension CoinRowView {
                 .minimumScaleFactor(0.7)
             
             HStack(spacing: 2) {
-                Image(systemName: (coin.priceChangePercentage24H ?? 0) >= 0 ? "arrow.up.right" : "arrow.down.right")
+                Image(systemName: isPositive ? "arrow.up.right" : "arrow.down.right")
                     .font(.system(size: 7, weight: .bold))
                 
-                Text(coin.priceChangePercentage24H?.asPercentString() ?? "0.00%")
+                Text(percentText)
                     .font(.system(size: 10, weight: .bold))
                     .lineLimit(1)
             }
-            .foregroundStyle((coin.priceChangePercentage24H ?? 0) >= 0 ? Color.theme.green : Color.theme.red)
+            .foregroundStyle(isPositive ? Color.theme.green : Color.theme.red)
             .padding(.horizontal, 5)
             .padding(.vertical, 2)
             .background(
-                ((coin.priceChangePercentage24H ?? 0) >= 0 ? Color.theme.green : Color.theme.red).opacity(0.12)
+                (isPositive ? Color.theme.green : Color.theme.red).opacity(0.12)
             )
             .clipShape(Capsule())
         }

@@ -92,7 +92,7 @@ extension PortfolioScreen {
             
             Spacer()
             
-            Text("Holdings / Price")
+            Text("Holdings / P&L")
                 .font(.caption)
                 .fontWeight(.semibold)
                 .foregroundStyle(Color.theme.secondaryText)

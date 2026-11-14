@@ -8,6 +8,19 @@
 import SwiftUI
 import CoreData
 
+// MARK: - CoreData KVC Accessors for Dynamic Attributes
+extension PortfolioEntity {
+    var storedInvestedAmount: Double {
+        get { (value(forKey: "investedAmount") as? Double) ?? 0.0 }
+        set { setValue(newValue, forKey: "investedAmount") }
+    }
+    
+    var storedAverageBuyPrice: Double {
+        get { (value(forKey: "averageBuyPrice") as? Double) ?? 0.0 }
+        set { setValue(newValue, forKey: "averageBuyPrice") }
+    }
+}
+
 class PortfolioDataService {
     private let container: NSPersistentContainer
     private let containerName: String = "PortfolioContainer"
@@ -24,20 +37,25 @@ class PortfolioDataService {
         }
         self.getPortfolio()
     }
+    
     // MARK: Public
-    func updatePortfolio(coin: CoinModel, amount: Double) {
+    func updatePortfolio(
+        coin: CoinModel,
+        amount: Double,
+        investedAmount: Double? = nil,
+        averageBuyPrice: Double? = nil
+    ) {
         // check if coin is already in portfolio
         if let entity = savedEntities.first(where: { $0.coinID == coin.id }) {
             if amount > 0 {
-                update(entity: entity, amount: amount)
+                update(entity: entity, amount: amount, investedAmount: investedAmount, averageBuyPrice: averageBuyPrice)
             } else {
                 delete(entity: entity)
             }
-        } else {
-            add(coin: coin, amount: amount)
+        } else if amount > 0 {
+            add(coin: coin, amount: amount, investedAmount: investedAmount, averageBuyPrice: averageBuyPrice)
         }
     }
-    
     
     // MARK: Private
     private func getPortfolio() {
@@ -49,15 +67,33 @@ class PortfolioDataService {
         }
     }
     
-    private func add(coin: CoinModel, amount: Double) {
+    private func add(
+        coin: CoinModel,
+        amount: Double,
+        investedAmount: Double?,
+        averageBuyPrice: Double?
+    ) {
         let entity = PortfolioEntity(context: container.viewContext)
         entity.coinID = coin.id
         entity.amount = amount
+        entity.storedInvestedAmount = investedAmount ?? (amount * coin.currentPrice)
+        entity.storedAverageBuyPrice = averageBuyPrice ?? coin.currentPrice
         applyChanges()
     }
     
-    private func update(entity: PortfolioEntity, amount: Double) {
+    private func update(
+        entity: PortfolioEntity,
+        amount: Double,
+        investedAmount: Double?,
+        averageBuyPrice: Double?
+    ) {
         entity.amount = amount
+        if let invested = investedAmount {
+            entity.storedInvestedAmount = invested
+        }
+        if let avgPrice = averageBuyPrice {
+            entity.storedAverageBuyPrice = avgPrice
+        }
         applyChanges()
     }
     
@@ -79,4 +115,3 @@ class PortfolioDataService {
         getPortfolio()
     }
 }
-

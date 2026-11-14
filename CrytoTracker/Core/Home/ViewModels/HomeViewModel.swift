@@ -17,6 +17,9 @@ class HomeViewModel: ObservableObject {
     @Published var sortOption: SortOption = .holdings
     
     @Published var portfolioTotalValue: Double = 0
+    @Published var portfolioTotalInvested: Double = 0
+    @Published var portfolioTotalProfitLoss: Double = 0
+    @Published var portfolioTotalProfitLossPercentage: Double = 0
     @Published var portfolioProfit24H: Double = 0
     @Published var portfolioProfitPercentage24H: Double = 0
     @Published var marketCategory: MarketCategory = .all
@@ -71,42 +74,20 @@ class HomeViewModel: ObservableObject {
         case rank, rankReversed, holdings, holdingsReversed, price , priceReversed
     }
     
-    init() {
-        addSubscribers()
+    init(isForPreview: Bool = false) {
+        if !isForPreview {
+            addSubscribers()
+        }
     }
-    
     
     func addSubscribers() {
         // updates allCoins
         $searchText
-            //using .combineLatest we are subcribing to 2 publisher at same time
             .combineLatest(coinDataService.$allCoins, $sortOption)
             .debounce(for: .seconds(0.5), scheduler: DispatchQueue.main)
             .map(filterAndSortCoins)
             .sink { [weak self] (returnedCoins) in
                 self?.allCoins = returnedCoins
-            }
-            .store(in: &cancellables)
-        
-        // updates portfolioCoins
-        $allCoins
-            .combineLatest(portfolioDataService.$savedEntities)
-            .map(mapAllCoinsToPortfolio)
-            .sink { [weak self] (returnedCoins) in
-                guard let self = self else { return }
-                let sorted = self.sortPortfolioCoinsIfNeeded(coins: returnedCoins)
-                self.portfolioCoins = sorted
-                self.updatePortfolioMetrics(coins: sorted)
-            }
-            .store(in: &cancellables)
-        
-        // updates marketData
-        marketDataService.$marketData
-            .combineLatest($portfolioCoins)
-            .map(mapGlobalMarketData)
-            .sink { [weak self] (returnedStats) in
-                self?.statistics = returnedStats
-                self?.isLoading = false
             }
             .store(in: &cancellables)
         
@@ -130,22 +111,59 @@ class HomeViewModel: ObservableObject {
                 self?.cashBalance = balance
             }
             .store(in: &cancellables)
+        
+        // updates portfolioCoins with latest coins, entities, and transactions
+        Publishers.CombineLatest3($allCoins, portfolioDataService.$savedEntities, transactionDataService.$savedTransactions)
+            .map { [weak self] (allCoins, entities, txs) -> [CoinModel] in
+                guard let self = self else { return [] }
+                return self.mapAllCoinsToPortfolio(allCoins: allCoins, portfolioEntities: entities, transactions: txs)
+            }
+            .sink { [weak self] (returnedCoins) in
+                guard let self = self else { return }
+                let sorted = self.sortPortfolioCoinsIfNeeded(coins: returnedCoins)
+                self.portfolioCoins = sorted
+                self.updatePortfolioMetrics(coins: sorted)
+            }
+            .store(in: &cancellables)
+        
+        // updates marketData
+        marketDataService.$marketData
+            .combineLatest($portfolioCoins)
+            .map(mapGlobalMarketData)
+            .sink { [weak self] (returnedStats) in
+                self?.statistics = returnedStats
+                self?.isLoading = false
+            }
+            .store(in: &cancellables)
     }
     
     // MARK: Helper func
     
     func updatePortfolio(coin: CoinModel, amount: Double) {
-        portfolioDataService.updatePortfolio(coin: coin, amount: amount)
+        let invested = amount * coin.currentPrice
+        portfolioDataService.updatePortfolio(
+            coin: coin,
+            amount: amount,
+            investedAmount: invested,
+            averageBuyPrice: coin.currentPrice
+        )
     }
     
     func deleteHolding(coin: CoinModel) {
-        portfolioDataService.updatePortfolio(coin: coin, amount: 0)
+        portfolioDataService.updatePortfolio(
+            coin: coin,
+            amount: 0,
+            investedAmount: 0,
+            averageBuyPrice: 0
+        )
     }
     
     @discardableResult
     func executeOrder(coin: CoinModel, type: TransactionType, amount: Double, pricePerCoin: Double) -> Bool {
         guard amount > 0 else { return false }
-        let currentHolding = portfolioCoins.first(where: { $0.id == coin.id })?.currentHoldings ?? 0
+        let existingHolding = portfolioCoins.first(where: { $0.id == coin.id })
+        let currentHolding = existingHolding?.currentHoldings ?? 0
+        let currentInvested = existingHolding?.investedAmount ?? (currentHolding * pricePerCoin)
         let totalCost = amount * pricePerCoin
         
         switch type {
@@ -154,14 +172,40 @@ class HomeViewModel: ObservableObject {
             guard walletDataService.deduct(amount: totalCost) else {
                 return false
             }
-            updatePortfolio(coin: coin, amount: currentHolding + amount)
+            let newAmount = currentHolding + amount
+            let newInvested = currentInvested + totalCost
+            let newAvgPrice = newAmount > 0 ? (newInvested / newAmount) : pricePerCoin
+            
+            portfolioDataService.updatePortfolio(
+                coin: coin,
+                amount: newAmount,
+                investedAmount: newInvested,
+                averageBuyPrice: newAvgPrice
+            )
             transactionDataService.addTransaction(coin: coin, type: .buy, amount: amount, pricePerCoin: pricePerCoin)
             return true
             
         case .sell:
             guard currentHolding >= amount else { return false }
             let newAmount = max(0, currentHolding - amount)
-            updatePortfolio(coin: coin, amount: newAmount)
+            
+            if newAmount <= 0.00000001 {
+                portfolioDataService.updatePortfolio(
+                    coin: coin,
+                    amount: 0,
+                    investedAmount: 0,
+                    averageBuyPrice: 0
+                )
+            } else {
+                let currentAvgPrice = (currentHolding > 0 && currentInvested > 0) ? (currentInvested / currentHolding) : pricePerCoin
+                let newInvested = newAmount * currentAvgPrice
+                portfolioDataService.updatePortfolio(
+                    coin: coin,
+                    amount: newAmount,
+                    investedAmount: newInvested,
+                    averageBuyPrice: currentAvgPrice
+                )
+            }
             walletDataService.credit(amount: totalCost)
             transactionDataService.addTransaction(coin: coin, type: .sell, amount: amount, pricePerCoin: pricePerCoin)
             return true
@@ -235,6 +279,10 @@ class HomeViewModel: ObservableObject {
     
     private func updatePortfolioMetrics(coins: [CoinModel]) {
         let total = coins.map { $0.currentHoldingsValue }.reduce(0, +)
+        let totalInvested = coins.map { $0.costBasis }.reduce(0, +)
+        let profitLoss = total - totalInvested
+        let profitLossPct = totalInvested > 0 ? ((total - totalInvested) / totalInvested) * 100.0 : 0.0
+        
         let previous = coins.map { coin -> Double in
             let pct = (coin.priceChangePercentage24H ?? 0) / 100.0
             guard pct > -1 else { return 0 }
@@ -242,6 +290,9 @@ class HomeViewModel: ObservableObject {
         }.reduce(0, +)
         
         self.portfolioTotalValue = total
+        self.portfolioTotalInvested = totalInvested
+        self.portfolioTotalProfitLoss = profitLoss
+        self.portfolioTotalProfitLossPercentage = profitLossPct
         self.portfolioProfit24H = total - previous
         self.portfolioProfitPercentage24H = previous > 0 ? ((total - previous) / previous) * 100.0 : 0.0
     }
@@ -253,19 +304,12 @@ class HomeViewModel: ObservableObject {
         HapticManager.notification(type: .success)
     }
     
-    
     private func filterAndSortCoins(text: String, coins: [CoinModel], sort: SortOption) -> [CoinModel] {
         var filteredCoins = filterCoins(text: text, coins: coins)
         sortCoins(sort: sort, coins: &filteredCoins)
         return filteredCoins
     }
     
-    // MARK: - Lesson (inout usage)
-    // Normally, if we return a new [CoinModel], it creates a fresh array → O(N) extra space.
-    // Using `inout` modifies the passed array directly → O(1) extra space.
-    // This is more efficient since no additional memory is allocated for a new array.
-
-    //Before: private func sortCoins(sort: SortOption, coins: [CoinModel]) -> [CoinModel] {
     private func sortCoins(sort: SortOption, coins: inout [CoinModel]) {
         switch sort {
         case .rank, .holdings:
@@ -290,7 +334,6 @@ class HomeViewModel: ObservableObject {
             return coins
         }
     }
-
     
     // filter data based on searchText else return all Coins
     private func filterCoins(text: String, coins: [CoinModel]) -> [CoinModel] {
@@ -302,14 +345,54 @@ class HomeViewModel: ObservableObject {
         }
     }
     
-    private func mapAllCoinsToPortfolio(allCoins: [CoinModel], portfolioEntities: [PortfolioEntity]) -> [CoinModel] {
+    private func mapAllCoinsToPortfolio(
+        allCoins: [CoinModel],
+        portfolioEntities: [PortfolioEntity],
+        transactions: [TransactionEntity]
+    ) -> [CoinModel] {
         allCoins
             .compactMap { (coin) -> CoinModel? in
-            guard let entity = portfolioEntities.first(where: { $0.coinID == coin.id }) else {
-                return nil
+                guard let entity = portfolioEntities.first(where: { $0.coinID == coin.id }), entity.amount > 0 else {
+                    return nil
+                }
+                var invested = entity.storedInvestedAmount
+                var avgPrice = entity.storedAverageBuyPrice
+                
+                // If entity has no invested amount recorded yet, calculate from logged transactions
+                if invested <= 0 {
+                    let coinTxs = transactions.filter { $0.coinID == coin.id }
+                    if !coinTxs.isEmpty {
+                        var runQty = 0.0
+                        var runCost = 0.0
+                        let sortedTxs = coinTxs.sorted { ($0.timestamp ?? Date()) < ($1.timestamp ?? Date()) }
+                        for tx in sortedTxs {
+                            let type = (tx.transactionType ?? "").uppercased()
+                            if type == "BUY" {
+                                runQty += tx.amount
+                                runCost += tx.totalValue
+                            } else if type == "SELL" {
+                                let fraction = runQty > 0 ? min(1.0, tx.amount / runQty) : 1.0
+                                runCost -= runCost * fraction
+                                runQty = max(0, runQty - tx.amount)
+                            }
+                        }
+                        if runQty > 0 && runCost > 0 {
+                            invested = runCost
+                            avgPrice = runCost / runQty
+                        }
+                    }
+                    if invested <= 0 {
+                        invested = entity.amount * coin.currentPrice
+                        avgPrice = coin.currentPrice
+                    }
+                }
+                
+                return coin.updateHoldings(
+                    amount: entity.amount,
+                    investedAmount: invested,
+                    averageBuyPrice: avgPrice
+                )
             }
-            return coin.updateHoldings(amount: entity.amount)
-        }
     }
     
     private func mapGlobalMarketData(marketDataModel: MarketDataModel?, portfolioCoins: [CoinModel]) -> [StatisticModel] {
@@ -327,23 +410,16 @@ class HomeViewModel: ObservableObject {
         let previousValue = portfolioCoins
             .map { coin -> Double in
                 let pct = (coin.priceChangePercentage24H ?? 0) / 100
-                // Guard against -100% (division by zero)
                 guard pct > -1 else {
-                    // Option A: treat as a total wipeout previously (previous = 0)
                     return 0
-                    // Option B: skip coin (return 0 and rely on others)
-                    // return 0
-                    // Option C: treat as undefined and fallback to current (less accurate)
-                    // return coin.currentHoldingsValue
                 }
                 return coin.currentHoldingsValue / (1 + pct)
             }
             .reduce(0, +)
         
-        // Avoid dividing by zero when previousValue == 0
         let percentageChange: Double? = previousValue > 0
             ? (portfolioValue - previousValue) / previousValue
-            : nil // or 0 if you prefer a defined default
+            : nil
         
         let portfolio = StatisticModel(
             title: "Portfolio Value",
@@ -355,6 +431,4 @@ class HomeViewModel: ObservableObject {
         
         return stats
     }
-    
-    
-    }
+}
