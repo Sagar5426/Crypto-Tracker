@@ -20,7 +20,7 @@
 		459ED35330A8B9E900116335 /* DetailViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 459ED30930A8B9E900116335 /* DetailViewModel.swift */; };
 		459ED35430A8B9E900116335 /* ChartView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 459ED30B30A8B9E900116335 /* ChartView.swift */; };
 		459ED35530A8B9E900116335 /* CoinHoldingCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 459ED30C30A8B9E900116335 /* CoinHoldingCard.swift */; };
-		459ED35630A8B9E900116335 /* DetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 459ED30D30A8B9E900116335 /* DetailView.swift */; };
+		459ED35630A8B9E900116335 /* CoinDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 459ED30D30A8B9E900116335 /* CoinDetailView.swift */; };
 		459ED35730A8B9E900116335 /* MarketViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 459ED31030A8B9E900116335 /* MarketViewModel.swift */; };
 		459ED35830A8B9E900116335 /* CoinRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 459ED31230A8B9E900116335 /* CoinRowView.swift */; };
 		459ED35930A8B9E900116335 /* MarketStatsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 459ED31330A8B9E900116335 /* MarketStatsView.swift */; };
@@ -61,6 +61,9 @@
 		459ED37C30A8B9E900116335 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 459ED34330A8B9E900116335 /* ContentView.swift */; };
 		459ED37D30A8B9E900116335 /* CrytoTrackerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 459ED34430A8B9E900116335 /* CrytoTrackerApp.swift */; };
 		459ED38230A8C13900116335 /* PortfolioCoinRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 459ED38130A8C13900116335 /* PortfolioCoinRowView.swift */; };
+		459ED38430A8F63600116335 /* HeaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 459ED38330A8F63600116335 /* HeaderView.swift */; };
+		459ED38730A9032E00116335 /* SwiftfulUI in Frameworks */ = {isa = PBXBuildFile; productRef = 459ED38630A9032E00116335 /* SwiftfulUI */; };
+		459ED38A30A9034100116335 /* SwiftfulRouting in Frameworks */ = {isa = PBXBuildFile; productRef = 459ED38930A9034100116335 /* SwiftfulRouting */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -75,7 +78,7 @@
 		459ED30930A8B9E900116335 /* DetailViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetailViewModel.swift; sourceTree = "<group>"; };
 		459ED30B30A8B9E900116335 /* ChartView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChartView.swift; sourceTree = "<group>"; };
 		459ED30C30A8B9E900116335 /* CoinHoldingCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoinHoldingCard.swift; sourceTree = "<group>"; };
-		459ED30D30A8B9E900116335 /* DetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetailView.swift; sourceTree = "<group>"; };
+		459ED30D30A8B9E900116335 /* CoinDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoinDetailView.swift; sourceTree = "<group>"; };
 		459ED31030A8B9E900116335 /* MarketViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarketViewModel.swift; sourceTree = "<group>"; };
 		459ED31230A8B9E900116335 /* CoinRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoinRowView.swift; sourceTree = "<group>"; };
 		459ED31330A8B9E900116335 /* MarketStatsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarketStatsView.swift; sourceTree = "<group>"; };
@@ -119,6 +122,7 @@
 		459ED34530A8B9E900116335 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		459ED34730A8B9E900116335 /* PortfolioContainer.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = PortfolioContainer.xcdatamodel; sourceTree = "<group>"; };
 		459ED38130A8C13900116335 /* PortfolioCoinRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PortfolioCoinRowView.swift; sourceTree = "<group>"; };
+		459ED38330A8F63600116335 /* HeaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeaderView.swift; sourceTree = "<group>"; };
 		45B438442E894416005778D8 /* CrytoTracker.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CrytoTracker.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -127,6 +131,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				459ED38730A9032E00116335 /* SwiftfulUI in Frameworks */,
+				459ED38A30A9034100116335 /* SwiftfulRouting in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -169,6 +175,7 @@
 				459ED30630A8B9E900116335 /* StatisticsView.swift */,
 				459ED30730A8B9E900116335 /* xMarkButton.swift */,
 				459ED31230A8B9E900116335 /* CoinRowView.swift */,
+				459ED38330A8F63600116335 /* HeaderView.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -186,7 +193,7 @@
 			children = (
 				459ED30B30A8B9E900116335 /* ChartView.swift */,
 				459ED30C30A8B9E900116335 /* CoinHoldingCard.swift */,
-				459ED30D30A8B9E900116335 /* DetailView.swift */,
+				459ED30D30A8B9E900116335 /* CoinDetailView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -388,6 +395,8 @@
 			);
 			name = CrytoTracker;
 			packageProductDependencies = (
+				459ED38630A9032E00116335 /* SwiftfulUI */,
+				459ED38930A9034100116335 /* SwiftfulRouting */,
 			);
 			productName = CrytoTracker;
 			productReference = 45B438442E894416005778D8 /* CrytoTracker.app */;
@@ -417,6 +426,10 @@
 			);
 			mainGroup = 4579C58C2E3A1ED200C447A9;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				459ED38530A9032E00116335 /* XCRemoteSwiftPackageReference "SwiftfulUI" */,
+				459ED38830A9034100116335 /* XCRemoteSwiftPackageReference "SwiftfulRouting" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 4579C58C2E3A1ED200C447A9;
 			projectDirPath = "";
@@ -453,9 +466,10 @@
 				459ED35130A8B9E900116335 /* StatisticsView.swift in Sources */,
 				459ED35230A8B9E900116335 /* xMarkButton.swift in Sources */,
 				459ED35330A8B9E900116335 /* DetailViewModel.swift in Sources */,
+				459ED38430A8F63600116335 /* HeaderView.swift in Sources */,
 				459ED35430A8B9E900116335 /* ChartView.swift in Sources */,
 				459ED35530A8B9E900116335 /* CoinHoldingCard.swift in Sources */,
-				459ED35630A8B9E900116335 /* DetailView.swift in Sources */,
+				459ED35630A8B9E900116335 /* CoinDetailView.swift in Sources */,
 				459ED35730A8B9E900116335 /* MarketViewModel.swift in Sources */,
 				459ED35830A8B9E900116335 /* CoinRowView.swift in Sources */,
 				459ED35930A8B9E900116335 /* MarketStatsView.swift in Sources */,
@@ -715,6 +729,38 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		459ED38530A9032E00116335 /* XCRemoteSwiftPackageReference "SwiftfulUI" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/SwiftfulThinking/SwiftfulUI.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.2.4;
+			};
+		};
+		459ED38830A9034100116335 /* XCRemoteSwiftPackageReference "SwiftfulRouting" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/SwiftfulThinking/SwiftfulRouting.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 6.2.2;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		459ED38630A9032E00116335 /* SwiftfulUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 459ED38530A9032E00116335 /* XCRemoteSwiftPackageReference "SwiftfulUI" */;
+			productName = SwiftfulUI;
+		};
+		459ED38930A9034100116335 /* SwiftfulRouting */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 459ED38830A9034100116335 /* XCRemoteSwiftPackageReference "SwiftfulRouting" */;
+			productName = SwiftfulRouting;
+		};
+/* End XCSwiftPackageProductDependency section */
 
 /* Begin XCVersionGroup section */
 		459ED33130A8B9E900116335 /* PortfolioContainer.xcdatamodeld */ = {

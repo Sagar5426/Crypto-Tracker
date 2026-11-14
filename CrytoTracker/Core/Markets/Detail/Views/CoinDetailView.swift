@@ -14,13 +14,13 @@ struct DetailLoadingView: View {
     var body: some View {
         ZStack {
             if let coin = coin {
-                DetailView(coin: coin)
+                CoinDetailView(coin: coin)
             }
         }
     }
 }
 
-struct DetailView: View {
+struct CoinDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var homeVM: MarketViewModel
     @StateObject var vm: DetailViewModel
@@ -78,12 +78,13 @@ struct DetailView: View {
                 linksSection
             }
             .padding(.horizontal)
-            .padding(.vertical, 8)
+            .padding(.top, 8)
+            .padding(.bottom, 12)
         }
         .background(Color.theme.background.ignoresSafeArea())
         .navigationTitle(vm.coin.name)
         .navigationBarTitleDisplayMode(.inline)
-        .safeAreaInset(edge: .bottom) {
+        .safeAreaInset(edge: .bottom, spacing: 0) {
             bottomTradeActionBar
         }
         .toolbar {
@@ -110,7 +111,7 @@ struct DetailView: View {
 }
 
 // MARK: - Subviews & Sections
-extension DetailView {
+extension CoinDetailView {
     
     private var isCoinWatchlisted: Bool {
         homeVM.isWatchlisted(coin: vm.coin)
@@ -125,6 +126,13 @@ extension DetailView {
     
     private var userHoldingCoin: CoinModel? {
         homeVM.portfolioCoins.first(where: { $0.id == vm.coin.id })
+    }
+    
+    private var availableHoldingsSubtitle: String {
+        if let holding = userHoldingCoin, let qty = holding.currentHoldings, qty > 0 {
+            return "\(qty.asNumberString()) \(vm.coin.symbol.uppercased())"
+        }
+        return "Manage Position"
     }
     
     // MARK: - Hero Header Card
@@ -160,20 +168,19 @@ extension DetailView {
                 
                 Spacer()
                 
-                    Button {
-                        withAnimation {
-                            homeVM.toggleWatchlist(coin: vm.coin)
-                        }
-                    } label: {
-                        Image(systemName: isCoinWatchlisted ? "star.fill" : "star")
-                            .font(.system(size: 18))
-                            .foregroundStyle(isCoinWatchlisted ? Color.yellow : Color.theme.secondaryText)
-                            .padding(6)
-                            .background(Color.theme.secondaryText.opacity(0.08))
-                            .clipShape(Circle())
+                Button {
+                    withAnimation {
+                        homeVM.toggleWatchlist(coin: vm.coin)
                     }
-                    .buttonStyle(.plain)
-                
+                } label: {
+                    Image(systemName: isCoinWatchlisted ? "star.fill" : "star")
+                        .font(.system(size: 18))
+                        .foregroundStyle(isCoinWatchlisted ? Color.yellow : Color.theme.secondaryText)
+                        .padding(6)
+                        .background(Color.theme.secondaryText.opacity(0.08))
+                        .clipShape(Circle())
+                }
+                .buttonStyle(.plain)
             }
             
             // 24H Price Range Bar
@@ -445,91 +452,166 @@ extension DetailView {
         .padding(.bottom, 16)
     }
     
-   
-    // MARK: - Bottom Trade Action Bar
+    // MARK: - Redesigned Floating Trade Action Dock
     private var bottomTradeActionBar: some View {
-        HStack(spacing: 10) {
-            // Floating Buy Button
-            Button {
-                tradeTypeToOpen = .buy
-                showPortfolioSheet = true
-                HapticManager.impact(style: .medium)
-            } label: {
-                HStack(spacing: 8) {
-                    ZStack {
-                        Circle()
-                            .fill(Color.white.opacity(0.22))
-                            .frame(width: 26, height: 26)
-                        Image(systemName: "arrow.down.left")
-                            .font(.system(size: 11, weight: .bold))
-                            .foregroundStyle(.white)
-                    }
-                    
-                    Text("Buy \(vm.coin.symbol.uppercased())")
-                        .font(.system(size: 15, weight: .bold, design: .rounded))
-                        .foregroundStyle(.white)
-                }
-                .frame(maxWidth: .infinity)
-                .frame(height: 48)
-                .background(
-                    LinearGradient(
-                        colors: [Color.theme.green, Color.theme.green.opacity(0.85)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                .clipShape(Capsule())
-                .shadow(color: Color.theme.green.opacity(0.35), radius: 6, x: 0, y: 3)
-            }
-            .buttonStyle(TradeActionButtonStyle())
+        ZStack(alignment: .bottom) {
+            // Subtle progressive fade so scrolling cards blend smoothly under the dock
+            LinearGradient(
+                colors: [
+                    Color.theme.background.opacity(0.0),
+                    Color.theme.background.opacity(0.75),
+                    Color.theme.background
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .frame(height: 76)
+            .allowsHitTesting(false)
             
-            // Floating Sell Button
-            Button {
-                tradeTypeToOpen = .sell
-                showPortfolioSheet = true
-                HapticManager.impact(style: .medium)
-            } label: {
-                HStack(spacing: 8) {
-                    ZStack {
-                        Circle()
-                            .fill(Color.white.opacity(0.22))
-                            .frame(width: 26, height: 26)
-                        Image(systemName: "arrow.up.right")
-                            .font(.system(size: 11, weight: .bold))
-                            .foregroundStyle(.white)
-                    }
-                    
-                    Text("Sell \(vm.coin.symbol.uppercased())")
-                        .font(.system(size: 15, weight: .bold, design: .rounded))
-                        .foregroundStyle(.white)
+            HStack(spacing: 10) {
+                // Primary Buy Action
+                tradeDockButton(
+                    title: "Buy \(vm.coin.symbol.uppercased())",
+                    subtitle: vm.coin.currentPrice.asFormattedPrice(),
+                    systemImage: "arrow.down.left",
+                    baseColor: Color.theme.green.opacity(0.7),
+                    isProminent: true
+                ) {
+                    tradeTypeToOpen = .buy
+                    showPortfolioSheet = true
+                    HapticManager.impact(style: .medium)
                 }
-                .frame(maxWidth: .infinity)
-                .frame(height: 48)
-                .background(
-                    LinearGradient(
-                        colors: [Color.theme.red, Color.theme.red.opacity(0.85)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                .clipShape(Capsule())
-                .shadow(color: Color.theme.red.opacity(0.35), radius: 6, x: 0, y: 3)
+                
+                // Secondary / Contextual Sell Action
+                tradeDockButton(
+                    title: "Sell \(vm.coin.symbol.uppercased())",
+                    subtitle: availableHoldingsSubtitle,
+                    systemImage: "arrow.up.right",
+                    baseColor: Color.theme.red.opacity(0.7),
+                    isProminent: userHasHoldings
+                ) {
+                    tradeTypeToOpen = .sell
+                    showPortfolioSheet = true
+                    HapticManager.impact(style: .medium)
+                }
             }
-            .buttonStyle(TradeActionButtonStyle())
+            .padding(7)
+            .background(
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .fill(Color.theme.background.opacity(0.82))
+                    .background(
+                        RoundedRectangle(cornerRadius: 22, style: .continuous)
+                            .fill(.ultraThinMaterial)
+                    )
+                    .shadow(color: Color.black.opacity(0.14), radius: 16, x: 0, y: 6)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .stroke(
+                        LinearGradient(
+                            colors: [
+                                Color.white.opacity(0.22),
+                                Color.theme.secondaryText.opacity(0.12)
+                            ],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        ),
+                        lineWidth: 1
+                    )
+            )
+            .padding(.horizontal, 16)
+            .padding(.bottom, 6)
         }
-        .padding(6)
-        .background(
-            Capsule()
-                .fill(Color.theme.background.opacity(0.92))
-                .background(Capsule().fill(.ultraThinMaterial))
-                .shadow(color: Color.theme.accent.opacity(0.12), radius: 12, x: 0, y: 4)
-        )
-        .overlay(
-            Capsule()
-                .stroke(Color.theme.secondaryText.opacity(0.15), lineWidth: 1)
-        )
-        .padding(.horizontal, 16)
-        .padding(.bottom, 6)
+    }
+    
+    // MARK: - Reusable Trade Dock Button
+    private func tradeDockButton(
+        title: String,
+        subtitle: String,
+        systemImage: String,
+        baseColor: Color,
+        isProminent: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            HStack(spacing: 10) {
+                // Circular Icon Badge
+                ZStack {
+                    Circle()
+                        .fill(
+                            isProminent
+                                ? Color.white.opacity(0.22)
+                                : baseColor.opacity(0.16)
+                        )
+                        .frame(width: 32, height: 32)
+                    
+                    Image(systemName: systemImage)
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(isProminent ? Color.white : baseColor)
+                }
+                
+                // Label & Contextual Subtitle
+                VStack(alignment: .leading, spacing: 1.5) {
+                    Text(title)
+                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                        .foregroundStyle(isProminent ? Color.white : baseColor)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.75)
+                    
+                    Text(subtitle)
+                        .font(.system(size: 10, weight: .semibold, design: .rounded))
+                        .monospacedDigit()
+                        .foregroundStyle(
+                            isProminent
+                                ? Color.white.opacity(0.82)
+                                : Color.theme.secondaryText
+                        )
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.75)
+                }
+                
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 12)
+            .frame(maxWidth: .infinity)
+            .frame(height: 50)
+            .background(
+                ZStack {
+                    if isProminent {
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .fill(
+                                LinearGradient(
+                                    colors: [
+                                        baseColor,
+                                        baseColor.opacity(0.82)
+                                    ],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                    } else {
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .fill(baseColor.opacity(0.10))
+                    }
+                }
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(
+                        isProminent
+                            ? Color.white.opacity(0.25)
+                            : baseColor.opacity(0.28),
+                        lineWidth: 1
+                    )
+            )
+            .shadow(
+                color: isProminent ? baseColor.opacity(0.28) : Color.clear,
+                radius: 8,
+                x: 0,
+                y: 4
+            )
+        }
+        .buttonStyle(TradeActionButtonStyle())
     }
 }
 
@@ -538,14 +620,14 @@ private struct TradeActionButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .scaleEffect(configuration.isPressed ? 0.96 : 1.0)
-            .opacity(configuration.isPressed ? 0.92 : 1.0)
-            .animation(.spring(response: 0.25, dampingFraction: 0.7), value: configuration.isPressed)
+            .brightness(configuration.isPressed ? -0.04 : 0)
+            .animation(.spring(response: 0.22, dampingFraction: 0.72), value: configuration.isPressed)
     }
 }
 
 #Preview("DetailView - Dark") {
     NavigationStack {
-        DetailView(coin: DeveloperPreview.instance.coin)
+        CoinDetailView(coin: DeveloperPreview.instance.coin)
             .environmentObject(DeveloperPreview.instance.homeVM)
     }
     .preferredColorScheme(.dark)
@@ -553,7 +635,7 @@ private struct TradeActionButtonStyle: ButtonStyle {
 
 #Preview("DetailView - Light") {
     NavigationStack {
-        DetailView(coin: DeveloperPreview.instance.coin)
+        CoinDetailView(coin: DeveloperPreview.instance.coin)
             .environmentObject(DeveloperPreview.instance.homeVM)
     }
     .preferredColorScheme(.light)

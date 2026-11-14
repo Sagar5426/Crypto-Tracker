@@ -1,39 +1,146 @@
 //
-//  HomeView.swift
+//  MarketView.swift
 //  CrytoTracker
 //
 //  Created by Sagar Jangra on 30/07/2025.
 //
 
 import SwiftUI
+import SwiftfulUI
 
 struct MarketView: View {
     
     @EnvironmentObject private var vm: MarketViewModel
     @State private var showSearchBar: Bool = false
     @State private var selectedCoinForDetail: CoinModel? = nil
+    @State private var scrollViewOffset: CGFloat = 0
     
     var body: some View {
         NavigationStack {
-            ZStack {
-                Color.theme.background
-                    .ignoresSafeArea()
-                
-                ScrollView {
-                    LazyVStack(spacing: 12) {
-                        // Expandable Search Bar
-                        if showSearchBar {
-                            SearchBarView(searchText: $vm.searchText)
-                                .transition(.move(edge: .top).combined(with: .opacity))
+            GeometryReader { geometry in
+                ZStack(alignment: .top) {
+                    Color.theme.background
+                        .ignoresSafeArea()
+                    
+                    // Dynamic ambient crypto gradient glow that scrolls synchronously with content
+                    backGroundGradientLayer
+                    
+                    // Scrollable content with collapsible top header & stats, plus sticky filter chips
+                    scrollViewLayer
+                    
+                    // Top safe area cover that masks content scrolling into status bar area
+                    topSafeAreaCover(topInset: geometry.safeAreaInsets.top)
+                }
+            }
+            .toolbar(.hidden, for: .navigationBar)
+            .fullScreenCover(item: $selectedCoinForDetail) { coin in
+                NavigationStack {
+                    CoinDetailView(coin: coin)
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Layout & Layers
+extension MarketView {
+    
+    // MARK: - Opacity Calculations (Fade Animation)
+    private var headerOpacity: Double {
+        if scrollViewOffset >= 0 { return 1.0 }
+        return max(0.0, 1.0 + Double(scrollViewOffset / 70.0))
+    }
+    
+    private var marketStatsOpacity: Double {
+        if scrollViewOffset >= -15 { return 1.0 }
+        return max(0.0, 1.0 + Double((scrollViewOffset + 15) / 95.0))
+    }
+    
+    /// Progress (0.0 to 1.0) of header and market stats fading out and filter chips becoming pinned
+    private var stickyProgress: Double {
+        if scrollViewOffset >= -30 { return 0.0 }
+        if scrollViewOffset <= -110 { return 1.0 }
+        return Double((-scrollViewOffset - 30.0) / 80.0)
+    }
+    
+    // MARK: - Top Safe Area Cover (Blocks scrolling data behind status bar)
+    private func topSafeAreaCover(topInset: CGFloat) -> some View {
+        Color.theme.background
+            .opacity(stickyProgress)
+            .frame(height: topInset)
+            .ignoresSafeArea(edges: .top)
+    }
+    
+    // MARK: - Ambient Gradient Layer (Moves synchronously with scroll)
+    private var backGroundGradientLayer: some View {
+        ZStack {
+            // Multi-stop linear gradient for rich ambient background fade
+            LinearGradient(
+                stops: [
+                    .init(color: Color.theme.accent.opacity(0.18), location: 0.0),
+                    .init(color: Color.theme.accent.opacity(0.08), location: 0.35),
+                    .init(color: Color.theme.green.opacity(0.05), location: 0.65),
+                    .init(color: Color.clear, location: 1.0)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            
+            // Soft ambient green aura on top-trailing
+            RadialGradient(
+                gradient: Gradient(colors: [
+                    Color.theme.green.opacity(0.14),
+                    Color.theme.green.opacity(0.04),
+                    Color.clear
+                ]),
+                center: .topTrailing,
+                startRadius: 20,
+                endRadius: 280
+            )
+            
+            // Soft ambient accent aura on top-leading
+            RadialGradient(
+                gradient: Gradient(colors: [
+                    Color.theme.accent.opacity(0.12),
+                    Color.theme.accent.opacity(0.03),
+                    Color.clear
+                ]),
+                center: .topLeading,
+                startRadius: 20,
+                endRadius: 260
+            )
+        }
+        .ignoresSafeArea(edges: .top)
+        .frame(height: 380 + max(0, scrollViewOffset))
+        .offset(y: min(0, scrollViewOffset))
+    }
+    
+    // MARK: - Scroll View Layer
+    private var scrollViewLayer: some View {
+        ScrollViewWithOnScrollChanged(
+            .vertical,
+            showsIndicators: false,
+            content: {
+                LazyVStack(spacing: 12, pinnedViews: [.sectionHeaders]) {
+                    // 1. Collapsible Top Header with pure opacity fade
+                    HeaderView(
+                        title: "Markets",
+                        showSearchBar: $showSearchBar,
+                        searchText: $vm.searchText,
+                        isLoading: vm.isLoading,
+                        onRefresh: {
+                            vm.reloadData()
                         }
-                        
-                        // Global Market Overview Card
-                        MarketStatsView(showPortfolio: .constant(false))
-                            .padding(.top, 4)
-                        
-                        // Category Pills (All, Gainers, Losers, Top 10)
-                        categoryPillsBar
-                        
+                    )
+                    .opacity(headerOpacity)
+                    
+                    // 2. Collapsible Global Market Overview Card with pure opacity fade
+                    MarketStatsView(showPortfolio: .constant(false))
+                        .padding(.top, 2)
+                        .opacity(marketStatsOpacity)
+                    
+                    // 3. Sticky Section: Filter chips stick at the top, below views scroll inside
+                    Section {
                         // Top Movers strip (when in 'All' and not searching)
                         if vm.searchText.isEmpty && vm.marketCategory == .all && !vm.topMovers.isEmpty {
                             topMoversSection
@@ -48,73 +155,83 @@ struct MarketView: View {
                         } else {
                             coinsLazyList
                         }
-                    }
-                    .padding(.bottom, 24)
-                }
-                .refreshable {
-                    vm.reloadData()
-                }
-            }
-            .navigationTitle("Markets")
-            .navigationBarTitleDisplayMode(.large)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                            showSearchBar.toggle()
-                            if !showSearchBar {
-                                vm.searchText = ""
-                                UIApplication.shared.endEditing()
-                            }
-                        }
-                    } label: {
-                        Image(systemName: showSearchBar ? "xmark" : "magnifyingglass")
-                            .font(.headline)
-                            .foregroundStyle(Color.theme.accent)
+                    } header: {
+                        filterChipsRow
                     }
                 }
+                .padding(.bottom, 24)
+            },
+            onScrollChanged: { offset in
+                scrollViewOffset = offset.y
             }
-            .fullScreenCover(item: $selectedCoinForDetail) { coin in
-                NavigationStack {
-                    DetailView(coin: coin)
-                }
-            }
+        )
+        .refreshable {
+            vm.reloadData()
         }
     }
-}
-
-// MARK: - Subviews & Extensions
-extension MarketView {
     
-    private var categoryPillsBar: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                ForEach(MarketViewModel.MarketCategory.allCases) { category in
-                    let isSelected = vm.marketCategory == category
-                    Button {
-                        withAnimation(.easeInOut(duration: 0.2)) {
-                            vm.marketCategory = category
-                        }
-                        HapticManager.notification(type: .success)
-                    } label: {
-                        Text(category.rawValue)
-                            .font(.caption)
-                            .fontWeight(isSelected ? .bold : .medium)
+    // MARK: - Sticky Filter Chips Row with dynamic transparency & divider
+    private var filterChipsRow: some View {
+        VStack(spacing: 0) {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(MarketViewModel.MarketCategory.allCases) { category in
+                        let isSelected = vm.marketCategory == category
+                        Button {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
+                                vm.marketCategory = category
+                            }
+                            HapticManager.notification(type: .success)
+                        } label: {
+                            HStack(spacing: 6) {
+                                if category == .gainers {
+                                    Image(systemName: "arrow.up.right")
+                                        .font(.system(size: 10, weight: .bold))
+                                } else if category == .losers {
+                                    Image(systemName: "arrow.down.right")
+                                        .font(.system(size: 10, weight: .bold))
+                                } else if category == .topTen {
+                                    Image(systemName: "chart.bar.fill")
+                                        .font(.system(size: 10, weight: .bold))
+                                }
+                                
+                                Text(category.rawValue)
+                                    .font(.system(size: 13, weight: isSelected ? .bold : .medium))
+                            }
                             .padding(.horizontal, 14)
-                            .padding(.vertical, 6)
+                            .padding(.vertical, 7)
                             .background(
                                 Capsule()
                                     .fill(isSelected ? Color.theme.accent : Color.theme.secondaryText.opacity(0.1))
                             )
+                            .overlay(
+                                Capsule()
+                                    .stroke(isSelected ? Color.clear : Color.theme.secondaryText.opacity(0.12), lineWidth: 1)
+                            )
                             .foregroundStyle(isSelected ? Color.theme.background : Color.theme.secondaryText)
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
                 }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 6)
             }
-            .padding(.horizontal)
-            .padding(.vertical, 2)
+            
+            // Small divider line below filter chips (fades in as header & stats fade)
+            Rectangle()
+                .fill(Color.theme.secondaryText.opacity(0.15))
+                .frame(height: 1)
+                .opacity(stickyProgress)
         }
+        .background(
+            Color.theme.background
+                .opacity(stickyProgress)
+        )
     }
+}
+
+// MARK: - Subviews & Sections
+extension MarketView {
     
     private var topMoversSection: some View {
         VStack(alignment: .leading, spacing: 8) {

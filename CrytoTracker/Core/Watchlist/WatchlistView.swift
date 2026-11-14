@@ -77,7 +77,7 @@ struct WatchlistView: View {
             }
             .fullScreenCover(item: $selectedCoinForDetail) { coin in
                 NavigationStack {
-                    DetailView(coin: coin)
+                    CoinDetailView(coin: coin)
                 }
             }
         }
