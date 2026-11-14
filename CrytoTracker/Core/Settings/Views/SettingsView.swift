@@ -31,6 +31,12 @@ struct SettingsView: View {
                         // App Brand Hero Header
                         appBrandHeader
                         
+                        // Fake Cash Wallet Section
+                        cashWalletCard
+                        
+                        // Trading & Transactions
+                        tradingAndTransactionsCard
+                        
                         // Data Provider Section
                         dataProviderCard
                         
@@ -149,6 +155,129 @@ extension SettingsView {
         )
         .overlay(
             RoundedRectangle(cornerRadius: 18)
+                .stroke(Color.theme.secondaryText.opacity(0.1), lineWidth: 1)
+        )
+    }
+    
+    // MARK: - Cash Wallet Card
+    private var cashWalletCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            sectionHeader(title: "Simulated Cash Wallet", icon: "banknote.fill")
+            
+            NavigationLink {
+                CashWalletView()
+            } label: {
+                HStack(spacing: 12) {
+                    ZStack {
+                        Circle()
+                            .fill(Color.theme.green.opacity(0.12))
+                            .frame(width: 44, height: 44)
+                        Image(systemName: "dollarsign.circle.fill")
+                            .font(.system(size: 24))
+                            .foregroundStyle(Color.theme.green)
+                    }
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Available Cash Balance")
+                            .font(.caption)
+                            .foregroundStyle(Color.theme.secondaryText)
+                        
+                        Text(vm.cashBalance.asCurrencyWith2Decimals())
+                            .font(.title3)
+                            .fontWeight(.bold)
+                            .foregroundStyle(Color.theme.accent)
+                    }
+                    
+                    Spacer()
+                    
+                    HStack(spacing: 6) {
+                        Text("Manage")
+                            .font(.caption)
+                            .fontWeight(.bold)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(Color.theme.green.opacity(0.12))
+                            .clipShape(Capsule())
+                            .foregroundStyle(Color.theme.green)
+                        
+                        Image(systemName: "chevron.right")
+                            .font(.caption)
+                            .foregroundStyle(Color.theme.secondaryText.opacity(0.6))
+                    }
+                }
+                .padding(.vertical, 2)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color.theme.background)
+                .shadow(color: Color.theme.accent.opacity(0.04), radius: 6, x: 0, y: 2)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Color.theme.secondaryText.opacity(0.1), lineWidth: 1)
+        )
+    }
+    
+    // MARK: - Trading & Transactions Card
+    private var tradingAndTransactionsCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            sectionHeader(title: "Trading & Orders", icon: "arrow.left.arrow.right")
+            
+            NavigationLink {
+                TransactionHistoryView()
+            } label: {
+                HStack(spacing: 12) {
+                    ZStack {
+                        Circle()
+                            .fill(Color.theme.accent.opacity(0.1))
+                            .frame(width: 40, height: 40)
+                        Image(systemName: "clock.arrow.circlepath")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundStyle(Color.theme.accent)
+                    }
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Transaction History")
+                            .font(.headline)
+                            .foregroundStyle(Color.theme.accent)
+                        
+                        Text("View all recorded buy and sell executions")
+                            .font(.caption)
+                            .foregroundStyle(Color.theme.secondaryText)
+                    }
+                    
+                    Spacer()
+                    
+                    HStack(spacing: 6) {
+                        Text("\(vm.transactions.count)")
+                            .font(.subheadline)
+                            .fontWeight(.bold)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 3)
+                            .background(Color.theme.accent.opacity(0.12))
+                            .clipShape(Capsule())
+                            .foregroundStyle(Color.theme.accent)
+                        
+                        Image(systemName: "chevron.right")
+                            .font(.caption)
+                            .foregroundStyle(Color.theme.secondaryText.opacity(0.6))
+                    }
+                }
+                .padding(.vertical, 2)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color.theme.background)
+                .shadow(color: Color.theme.accent.opacity(0.04), radius: 6, x: 0, y: 2)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
                 .stroke(Color.theme.secondaryText.opacity(0.1), lineWidth: 1)
         )
     }

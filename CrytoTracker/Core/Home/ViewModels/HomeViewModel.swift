@@ -21,6 +21,8 @@ class HomeViewModel: ObservableObject {
     @Published var portfolioProfitPercentage24H: Double = 0
     @Published var marketCategory: MarketCategory = .all
     @Published var watchlistCoinIDs: Set<String> = []
+    @Published var transactions: [TransactionEntity] = []
+    @Published var cashBalance: Double = 0.0
     
     enum MarketCategory: String, CaseIterable, Identifiable {
         case all = "All"
@@ -61,6 +63,8 @@ class HomeViewModel: ObservableObject {
     private let marketDataService = MarketDataService()
     private let portfolioDataService = PortfolioDataService()
     private let watchlistDataService = WatchlistDataService()
+    private let transactionDataService = TransactionDataService()
+    private let walletDataService = WalletDataService()
     private var cancellables = Set<AnyCancellable>()
     
     enum SortOption {
@@ -112,6 +116,20 @@ class HomeViewModel: ObservableObject {
                 self?.watchlistCoinIDs = Set(entities.compactMap { $0.coinID })
             }
             .store(in: &cancellables)
+        
+        // updates transactions from Core Data
+        transactionDataService.$savedTransactions
+            .sink { [weak self] (transactions) in
+                self?.transactions = transactions
+            }
+            .store(in: &cancellables)
+        
+        // updates cash wallet balance
+        walletDataService.$cashBalance
+            .sink { [weak self] balance in
+                self?.cashBalance = balance
+            }
+            .store(in: &cancellables)
     }
     
     // MARK: Helper func
@@ -122,6 +140,83 @@ class HomeViewModel: ObservableObject {
     
     func deleteHolding(coin: CoinModel) {
         portfolioDataService.updatePortfolio(coin: coin, amount: 0)
+    }
+    
+    @discardableResult
+    func executeOrder(coin: CoinModel, type: TransactionType, amount: Double, pricePerCoin: Double) -> Bool {
+        guard amount > 0 else { return false }
+        let currentHolding = portfolioCoins.first(where: { $0.id == coin.id })?.currentHoldings ?? 0
+        let totalCost = amount * pricePerCoin
+        
+        switch type {
+        case .buy:
+            // Check cash wallet balance
+            guard walletDataService.deduct(amount: totalCost) else {
+                return false
+            }
+            updatePortfolio(coin: coin, amount: currentHolding + amount)
+            transactionDataService.addTransaction(coin: coin, type: .buy, amount: amount, pricePerCoin: pricePerCoin)
+            return true
+            
+        case .sell:
+            guard currentHolding >= amount else { return false }
+            let newAmount = max(0, currentHolding - amount)
+            updatePortfolio(coin: coin, amount: newAmount)
+            walletDataService.credit(amount: totalCost)
+            transactionDataService.addTransaction(coin: coin, type: .sell, amount: amount, pricePerCoin: pricePerCoin)
+            return true
+            
+        case .deposit, .withdraw:
+            return false
+        }
+    }
+    
+    func depositCash(amount: Double) {
+        guard amount > 0 else { return }
+        walletDataService.deposit(amount: amount)
+        transactionDataService.addCustomTransaction(
+            coinID: "usd-cash",
+            coinName: "USD Cash Deposit",
+            coinSymbol: "USD",
+            type: .deposit,
+            amount: amount,
+            pricePerCoin: 1.0,
+            totalValue: amount
+        )
+    }
+    
+    @discardableResult
+    func withdrawCash(amount: Double) -> Bool {
+        guard amount > 0 && cashBalance >= amount else { return false }
+        let success = walletDataService.withdraw(amount: amount)
+        if success {
+            transactionDataService.addCustomTransaction(
+                coinID: "usd-cash",
+                coinName: "USD Cash Withdrawal",
+                coinSymbol: "USD",
+                type: .withdraw,
+                amount: amount,
+                pricePerCoin: 1.0,
+                totalValue: amount
+            )
+        }
+        return success
+    }
+    
+    func resetCashWallet(to amount: Double = 10_000.0) {
+        walletDataService.resetBalance(amount: amount)
+    }
+    
+    func deleteTransaction(_ entity: TransactionEntity) {
+        transactionDataService.deleteTransaction(entity: entity)
+    }
+    
+    func clearAllTransactions() {
+        transactionDataService.clearAllTransactions()
+    }
+    
+    func transactions(for coinID: String) -> [TransactionEntity] {
+        transactions.filter { $0.coinID == coinID }
     }
     
     func portfolioShare(for coin: CoinModel) -> Double {

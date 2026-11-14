@@ -13,6 +13,7 @@ struct PortfolioView: View {
     
     // Initializer context
     private let initialCoin: CoinModel?
+    private let initialTradeType: TransactionType
     
     // State
     @State private var activeCoin: CoinModel?
@@ -20,17 +21,18 @@ struct PortfolioView: View {
     @State private var searchText: String = ""
     @State private var filterCategory: AssetCategory = .all
     
-    // Editor State
+    // Trade State
+    @State private var tradeType: TransactionType = .buy
     @State private var inputMode: InputMode = .token
     @State private var quantityText: String = ""
     @State private var fiatText: String = ""
-    @State private var showCheckMark = false
+    @State private var orderExecuted: Bool = false
     @State private var coinToDelete: CoinModel? = nil
-    @State private var showDeleteConfirmation = false
+    @State private var showDeleteConfirmation: Bool = false
     
     enum PortfolioTab: String, CaseIterable, Identifiable {
         case myHoldings = "My Holdings"
-        case addAsset = "Add Asset"
+        case addAsset = "All Cryptos"
         var id: String { rawValue }
     }
     
@@ -48,16 +50,11 @@ struct PortfolioView: View {
         var id: String { rawValue }
     }
     
-    init(selectedCoin: CoinModel? = nil) {
+    init(selectedCoin: CoinModel? = nil, initialTradeType: TransactionType = .buy) {
         self.initialCoin = selectedCoin
+        self.initialTradeType = initialTradeType
         self._activeCoin = State(initialValue: selectedCoin)
-        if let coin = selectedCoin {
-            let current = coin.currentHoldings ?? 0
-            let qText = current > 0 ? (current.truncatingRemainder(dividingBy: 1) == 0 ? String(format: "%.0f", current) : "\(current)") : ""
-            self._quantityText = State(initialValue: qText)
-            let fVal = current * coin.currentPrice
-            self._fiatText = State(initialValue: fVal > 0 ? String(format: "%.2f", fVal) : "")
-        }
+        self._tradeType = State(initialValue: initialTradeType)
     }
     
     // Computed Lists
@@ -107,7 +104,7 @@ struct PortfolioView: View {
                     .ignoresSafeArea()
                 
                 if let coin = activeCoin {
-                    holdingEditorView(coin: coin)
+                    tradeStudioView(coin: coin)
                         .transition(.asymmetric(
                             insertion: .move(edge: .trailing).combined(with: .opacity),
                             removal: .move(edge: .trailing).combined(with: .opacity)
@@ -147,7 +144,7 @@ extension PortfolioView {
             // Mode Picker
             Picker("Mode", selection: $selectedTab) {
                 Text("My Holdings (\(vm.portfolioCoins.count))").tag(PortfolioTab.myHoldings)
-                Text("Add Asset").tag(PortfolioTab.addAsset)
+                Text("All Cryptos").tag(PortfolioTab.addAsset)
             }
             .pickerStyle(.segmented)
             .padding(.horizontal)
@@ -157,7 +154,7 @@ extension PortfolioView {
             SearchBarView(searchText: $searchText)
                 .padding(.vertical, -4)
             
-            // Category Filter Pills (Add Asset tab only)
+            // Category Filter Pills (All Cryptos tab only)
             if selectedTab == .addAsset {
                 categoryPillsBar
             }
@@ -169,7 +166,7 @@ extension PortfolioView {
                 addAssetTabContent
             }
         }
-        .navigationTitle("Manage Portfolio")
+        .navigationTitle("Trade & Portfolio")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
@@ -218,12 +215,7 @@ extension PortfolioView {
                 ScrollView {
                     LazyVStack(spacing: 8) {
                         ForEach(filteredHoldings) { coin in
-                            Button {
-                                openEditor(for: coin)
-                            } label: {
-                                holdingListRow(coin: coin)
-                            }
-                            .buttonStyle(.plain)
+                            holdingListRow(coin: coin)
                         }
                     }
                     .padding(.horizontal)
@@ -268,19 +260,43 @@ extension PortfolioView {
                     .fontWeight(.bold)
                     .foregroundStyle(Color.theme.accent)
                     .lineLimit(1)
-                    .minimumScaleFactor(0.7)
                 
                 Text("\((coin.currentHoldings ?? 0).asNumberString()) \(coin.symbol.uppercased())")
                     .font(.caption2)
                     .foregroundStyle(Color.theme.secondaryText)
                     .lineLimit(1)
-                    .minimumScaleFactor(0.7)
             }
             
-            Image(systemName: "chevron.right")
-                .font(.caption)
-                .foregroundStyle(Color.theme.secondaryText.opacity(0.6))
-                .padding(.leading, 4)
+            // Quick Trade Action Buttons
+            HStack(spacing: 6) {
+                Button {
+                    openTradeStudio(for: coin, type: .buy)
+                } label: {
+                    Text("Buy")
+                        .font(.caption2)
+                        .fontWeight(.bold)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 5)
+                        .background(Color.theme.green.opacity(0.15))
+                        .foregroundStyle(Color.theme.green)
+                        .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                
+                Button {
+                    openTradeStudio(for: coin, type: .sell)
+                } label: {
+                    Text("Sell")
+                        .font(.caption2)
+                        .fontWeight(.bold)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 5)
+                        .background(Color.theme.red.opacity(0.15))
+                        .foregroundStyle(Color.theme.red)
+                        .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+            }
         }
         .padding(12)
         .background(
@@ -294,9 +310,15 @@ extension PortfolioView {
         )
         .contextMenu {
             Button {
-                openEditor(for: coin)
+                openTradeStudio(for: coin, type: .buy)
             } label: {
-                Label("Edit Holding", systemImage: "pencil")
+                Label("Buy \(coin.symbol.uppercased())", systemImage: "plus.circle")
+            }
+            
+            Button {
+                openTradeStudio(for: coin, type: .sell)
+            } label: {
+                Label("Sell \(coin.symbol.uppercased())", systemImage: "minus.circle")
             }
             
             Button(role: .destructive) {
@@ -326,7 +348,7 @@ extension PortfolioView {
                 .fontWeight(.bold)
                 .foregroundStyle(Color.theme.accent)
             
-            Text("Track your cryptocurrency holdings with live valuations, profit & loss, and allocation breakdown.")
+            Text("Buy cryptocurrency to start tracking your holdings, live valuations, profit & loss, and trade history.")
                 .font(.subheadline)
                 .foregroundStyle(Color.theme.secondaryText)
                 .multilineTextAlignment(.center)
@@ -339,7 +361,7 @@ extension PortfolioView {
             } label: {
                 HStack(spacing: 6) {
                     Image(systemName: "plus.circle.fill")
-                    Text("Browse & Add Assets")
+                    Text("Explore & Buy Cryptos")
                 }
                 .font(.subheadline)
                 .fontWeight(.bold)
@@ -356,76 +378,75 @@ extension PortfolioView {
         .padding(.horizontal)
     }
     
-    // MARK: - Add Asset List
+    // MARK: - All Cryptos Tab Content
     private var addAssetTabContent: some View {
         ScrollView {
             LazyVStack(spacing: 8) {
                 ForEach(filteredAllCoins) { coin in
                     let isHeld = vm.portfolioCoins.contains(where: { $0.id == coin.id })
                     
-                    Button {
-                        openEditor(for: coin)
-                    } label: {
-                        HStack(spacing: 12) {
-                            Text("\(coin.rank)")
-                                .font(.system(size: 11, weight: .bold, design: .monospaced))
+                    HStack(spacing: 12) {
+                        Text("\(coin.rank)")
+                            .font(.system(size: 11, weight: .bold, design: .monospaced))
+                            .foregroundStyle(Color.theme.secondaryText)
+                            .frame(width: 20, alignment: .leading)
+                        
+                        CoinImageView(coin: coin)
+                            .frame(width: 32, height: 32)
+                        
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(coin.symbol.uppercased())
+                                .font(.headline)
+                                .foregroundStyle(Color.theme.accent)
+                            Text(coin.name)
+                                .font(.caption2)
                                 .foregroundStyle(Color.theme.secondaryText)
-                                .frame(width: 20, alignment: .leading)
-                            
-                            CoinImageView(coin: coin)
-                                .frame(width: 32, height: 32)
-                            
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(coin.symbol.uppercased())
-                                    .font(.headline)
-                                    .foregroundStyle(Color.theme.accent)
-                                Text(coin.name)
-                                    .font(.caption2)
-                                    .foregroundStyle(Color.theme.secondaryText)
-                                    .lineLimit(1)
-                            }
-                            
-                            Spacer()
-                            
-                            VStack(alignment: .trailing, spacing: 2) {
-                                Text(coin.currentPrice.asFormattedPrice())
-                                    .font(.subheadline)
-                                    .fontWeight(.bold)
-                                    .foregroundStyle(Color.theme.accent)
-                                
-                                Text(coin.priceChangePercentage24H?.asPercentString() ?? "0.0%")
-                                    .font(.caption2)
-                                    .fontWeight(.bold)
-                                    .foregroundStyle((coin.priceChangePercentage24H ?? 0) >= 0 ? Color.theme.green : Color.theme.red)
-                            }
-                            
-                            if isHeld {
-                                Text("Held")
-                                    .font(.system(size: 10, weight: .bold))
-                                    .foregroundStyle(Color.theme.green)
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 4)
-                                    .background(Color.theme.green.opacity(0.12))
-                                    .clipShape(Capsule())
-                            } else {
-                                Image(systemName: "plus.circle.fill")
-                                    .font(.title3)
-                                    .foregroundStyle(Color.theme.accent)
-                            }
+                                .lineLimit(1)
                         }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 10)
-                        .background(
-                            RoundedRectangle(cornerRadius: 12)
-                                .fill(Color.theme.background)
-                                .shadow(color: Color.theme.accent.opacity(0.03), radius: 4, x: 0, y: 1)
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color.theme.secondaryText.opacity(0.08), lineWidth: 1)
-                        )
+                        
+                        Spacer()
+                        
+                        VStack(alignment: .trailing, spacing: 2) {
+                            Text(coin.currentPrice.asFormattedPrice())
+                                .font(.subheadline)
+                                .fontWeight(.bold)
+                                .foregroundStyle(Color.theme.accent)
+                            
+                            Text(coin.priceChangePercentage24H?.asPercentString() ?? "0.0%")
+                                .font(.caption2)
+                                .fontWeight(.bold)
+                                .foregroundStyle((coin.priceChangePercentage24H ?? 0) >= 0 ? Color.theme.green : Color.theme.red)
+                        }
+                        
+                        // Trade Button
+                        Button {
+                            openTradeStudio(for: coin, type: .buy)
+                        } label: {
+                            HStack(spacing: 4) {
+                                Image(systemName: isHeld ? "arrow.left.arrow.right" : "cart.fill.badge.plus")
+                                Text(isHeld ? "Trade" : "Buy")
+                            }
+                            .font(.caption2)
+                            .fontWeight(.bold)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(Color.theme.accent)
+                            .foregroundStyle(Color.theme.background)
+                            .clipShape(Capsule())
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 10)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color.theme.background)
+                            .shadow(color: Color.theme.accent.opacity(0.03), radius: 4, x: 0, y: 1)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color.theme.secondaryText.opacity(0.08), lineWidth: 1)
+                    )
                 }
             }
             .padding(.horizontal)
@@ -434,241 +455,60 @@ extension PortfolioView {
     }
 }
 
-// MARK: - Dedicated Holding Editor View
+// MARK: - Buy & Sell Trade Studio View
 extension PortfolioView {
     
-    private func holdingEditorView(coin: CoinModel) -> some View {
-        ScrollView {
-            VStack(spacing: 18) {
-                // Coin Header Hero Card
-                HStack(spacing: 12) {
-                    CoinImageView(coin: coin)
-                        .frame(width: 44, height: 44)
-                    
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(coin.name)
-                            .font(.title3)
-                            .fontWeight(.bold)
-                            .foregroundStyle(Color.theme.accent)
-                        
-                        Text(coin.symbol.uppercased())
-                            .font(.caption)
-                            .fontWeight(.bold)
-                            .foregroundStyle(Color.theme.secondaryText)
-                    }
-                    
-                    Spacer()
-                    
-                    VStack(alignment: .trailing, spacing: 2) {
-                        Text(coin.currentPrice.asFormattedPrice())
-                            .font(.headline)
-                            .fontWeight(.bold)
-                            .foregroundStyle(Color.theme.accent)
-                        
-                        Text(coin.priceChangePercentage24H?.asPercentString() ?? "0.0%")
-                            .font(.caption)
-                            .fontWeight(.bold)
-                            .foregroundStyle((coin.priceChangePercentage24H ?? 0) >= 0 ? Color.theme.green : Color.theme.red)
-                    }
-                }
-                .padding(14)
-                .background(
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(Color.theme.background)
-                        .shadow(color: Color.theme.accent.opacity(0.04), radius: 6, x: 0, y: 2)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16)
-                        .stroke(Color.theme.secondaryText.opacity(0.1), lineWidth: 1)
+    private func tradeStudioView(coin: CoinModel) -> some View {
+        let currentHolding = vm.portfolioCoins.first(where: { $0.id == coin.id })?.currentHoldings ?? 0
+        let currentHoldingValue = currentHolding * coin.currentPrice
+        let tradeAmount = Double(quantityText) ?? 0
+        let totalOrderValue = tradeAmount * coin.currentPrice
+        let resultingHolding = tradeType == .buy ? (currentHolding + tradeAmount) : max(0, currentHolding - tradeAmount)
+        let isInsufficientBalance = tradeType == .sell && tradeAmount > currentHolding
+        let isInsufficientCash = tradeType == .buy && totalOrderValue > vm.cashBalance
+        let canExecuteOrder = tradeAmount > 0 && !isInsufficientBalance && !isInsufficientCash
+        
+        let coinHistory = vm.transactions(for: coin.id)
+        
+        return ScrollView {
+            VStack(spacing: 16) {
+                // Buy / Sell Selector
+                buySellTabPicker
+                
+                // Coin Header Card
+                coinHeaderCard(coin: coin, currentHolding: currentHolding, currentHoldingValue: currentHoldingValue)
+                
+                // Trade Order Input Box
+                orderInputCard(coin: coin, currentHolding: currentHolding)
+                
+                // Order Impact & Execution Summary
+                orderSummaryCard(
+                    coin: coin,
+                    tradeAmount: tradeAmount,
+                    totalOrderValue: totalOrderValue,
+                    currentHolding: currentHolding,
+                    resultingHolding: resultingHolding,
+                    isInsufficientBalance: isInsufficientBalance,
+                    isInsufficientCash: isInsufficientCash
                 )
                 
-                // Input Mode Toggle & Amount Box
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        Picker("Input Mode", selection: $inputMode) {
-                            ForEach(InputMode.allCases) { mode in
-                                Text(mode.rawValue).tag(mode)
-                            }
-                        }
-                        .pickerStyle(.segmented)
-                        .frame(maxWidth: 200)
-                        
-                        Spacer()
-                        
-                        Button("Clear") {
-                            quantityText = ""
-                            fiatText = ""
-                        }
-                        .font(.caption)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(Color.theme.red)
-                        .opacity((quantityText.isEmpty && fiatText.isEmpty) ? 0 : 1)
-                    }
-                    
-                    // Amount Field
-                    HStack {
-                        if inputMode == .fiat {
-                            Text("$")
-                                .font(.system(size: 28, weight: .bold, design: .rounded))
-                                .foregroundStyle(Color.theme.secondaryText)
-                            
-                            TextField("0.00", text: $fiatText)
-                                .font(.system(size: 28, weight: .bold, design: .rounded))
-                                .keyboardType(.decimalPad)
-                                .onChange(of: fiatText) { _, newFiat in
-                                    syncFromFiat(newFiat: newFiat, price: coin.currentPrice)
-                                }
-                        } else {
-                            TextField("0.00", text: $quantityText)
-                                .font(.system(size: 28, weight: .bold, design: .rounded))
-                                .keyboardType(.decimalPad)
-                                .onChange(of: quantityText) { _, newQty in
-                                    syncFromQuantity(newQty: newQty, price: coin.currentPrice)
-                                }
-                            
-                            Text(coin.symbol.uppercased())
-                                .font(.headline)
-                                .fontWeight(.bold)
-                                .foregroundStyle(Color.theme.secondaryText)
-                        }
-                    }
-                    .padding(14)
-                    .background(
-                        RoundedRectangle(cornerRadius: 14)
-                            .fill(Color.theme.secondaryText.opacity(0.08))
-                    )
-                    
-                    // Equivalent conversion subtitle
-                    if inputMode == .fiat {
-                        let qty = Double(quantityText) ?? 0
-                        Text("≈ \(qty.asNumberString()) \(coin.symbol.uppercased())")
-                            .font(.caption)
-                            .fontWeight(.semibold)
-                            .foregroundStyle(Color.theme.secondaryText)
-                    } else {
-                        let val = (Double(quantityText) ?? 0) * coin.currentPrice
-                        Text("≈ \(val.asCurrencyWith2Decimals())")
-                            .font(.caption)
-                            .fontWeight(.semibold)
-                            .foregroundStyle(Color.theme.secondaryText)
-                    }
-                    
-                    // Quick Increment Pills
-                    HStack(spacing: 8) {
-                        ForEach([0.1, 0.5, 1.0, 5.0, 10.0], id: \.self) { increment in
-                            Button {
-                                addIncrement(increment: increment, price: coin.currentPrice)
-                            } label: {
-                                Text("+\(increment < 1 ? String(format: "%.1f", increment) : String(format: "%.0f", increment))")
-                                    .font(.caption)
-                                    .fontWeight(.bold)
-                                    .padding(.horizontal, 10)
-                                    .padding(.vertical, 6)
-                                    .background(Color.theme.accent.opacity(0.08))
-                                    .clipShape(Capsule())
-                                    .foregroundStyle(Color.theme.accent)
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
-                    .padding(.top, 4)
-                }
-                .padding(14)
-                .background(
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(Color.theme.background)
-                        .shadow(color: Color.theme.accent.opacity(0.04), radius: 6, x: 0, y: 2)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16)
-                        .stroke(Color.theme.secondaryText.opacity(0.1), lineWidth: 1)
+                // Execution Action Button
+                orderActionButton(
+                    coin: coin,
+                    tradeAmount: tradeAmount,
+                    canExecute: canExecuteOrder,
+                    isInsufficientBalance: isInsufficientBalance,
+                    isInsufficientCash: isInsufficientCash
                 )
                 
-                // Real-Time Valuation & P&L Summary Card
-                let qty = Double(quantityText) ?? 0
-                let totalValue = qty * coin.currentPrice
-                let pnl24H = totalValue * ((coin.priceChangePercentage24H ?? 0) / 100.0)
-                
-                VStack(spacing: 12) {
-                    HStack {
-                        Text("Total Holding Valuation")
-                            .font(.subheadline)
-                            .foregroundStyle(Color.theme.secondaryText)
-                        Spacer()
-                        Text(totalValue.asCurrencyWith2Decimals())
-                            .font(.title3)
-                            .fontWeight(.bold)
-                            .foregroundStyle(Color.theme.accent)
-                    }
-                    
-                    Divider()
-                    
-                    HStack {
-                        Text("Estimated 24h P&L")
-                            .font(.subheadline)
-                            .foregroundStyle(Color.theme.secondaryText)
-                        Spacer()
-                        Text((pnl24H >= 0 ? "+" : "") + pnl24H.asCurrencyWith2Decimals())
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                            .foregroundStyle(pnl24H >= 0 ? Color.theme.green : Color.theme.red)
-                    }
+                // Coin Specific Transaction History
+                if !coinHistory.isEmpty {
+                    coinTradeHistorySection(transactions: coinHistory, symbol: coin.symbol.uppercased())
                 }
-                .padding(14)
-                .background(
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(Color.theme.background)
-                        .shadow(color: Color.theme.accent.opacity(0.04), radius: 6, x: 0, y: 2)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16)
-                        .stroke(Color.theme.secondaryText.opacity(0.1), lineWidth: 1)
-                )
-                
-                // Action Buttons
-                VStack(spacing: 12) {
-                    Button {
-                        saveHolding(for: coin)
-                    } label: {
-                        HStack(spacing: 8) {
-                            if showCheckMark {
-                                Image(systemName: "checkmark")
-                            }
-                            Text(showCheckMark ? "Saved!" : "Save Holdings")
-                        }
-                        .font(.headline)
-                        .fontWeight(.bold)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(showCheckMark ? Color.theme.green : Color.theme.accent)
-                        .foregroundStyle(Color.theme.background)
-                        .clipShape(RoundedRectangle(cornerRadius: 14))
-                        .shadow(color: Color.theme.accent.opacity(0.2), radius: 8, x: 0, y: 4)
-                    }
-                    .buttonStyle(.plain)
-                    
-                    if vm.portfolioCoins.contains(where: { $0.id == coin.id }) {
-                        Button {
-                            coinToDelete = coin
-                            showDeleteConfirmation = true
-                        } label: {
-                            HStack(spacing: 6) {
-                                Image(systemName: "trash")
-                                Text("Remove from Portfolio")
-                            }
-                            .font(.subheadline)
-                            .fontWeight(.bold)
-                            .foregroundStyle(Color.theme.red)
-                            .padding(.vertical, 6)
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-                .padding(.top, 4)
             }
             .padding()
         }
-        .navigationTitle(initialCoin != nil ? "Edit Holdings" : coin.symbol.uppercased())
+        .navigationTitle("\(tradeType.title) \(coin.symbol.uppercased())")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
@@ -694,16 +534,552 @@ extension PortfolioView {
         }
     }
     
-    // MARK: - Logic & Sync Helpers
-    private func openEditor(for coin: CoinModel) {
-        activeCoin = coin
-        if let current = coin.currentHoldings, current > 0 {
-            quantityText = current.truncatingRemainder(dividingBy: 1) == 0 ? String(format: "%.0f", current) : "\(current)"
-            fiatText = String(format: "%.2f", current * coin.currentPrice)
-        } else {
-            quantityText = ""
-            fiatText = ""
+    // MARK: - Buy / Sell Tab Picker
+    private var buySellTabPicker: some View {
+        HStack(spacing: 8) {
+            // Buy Button Tab
+            Button {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    tradeType = .buy
+                }
+                HapticManager.notification(type: .success)
+            } label: {
+                HStack(spacing: 5) {
+                    Image(systemName: "arrow.down.left")
+                        .font(.system(size: 11, weight: .bold))
+                    Text("BUY")
+                        .font(.subheadline)
+                        .fontWeight(.bold)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 8)
+                .background(
+                    Capsule()
+                        .fill(tradeType == .buy ? Color.theme.green : Color.clear)
+                )
+                .foregroundStyle(tradeType == .buy ? Color.white : Color.theme.secondaryText)
+            }
+            .buttonStyle(.plain)
+            
+            // Sell Button Tab
+            Button {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    tradeType = .sell
+                }
+                HapticManager.notification(type: .success)
+            } label: {
+                HStack(spacing: 5) {
+                    Image(systemName: "arrow.up.right")
+                        .font(.system(size: 11, weight: .bold))
+                    Text("SELL")
+                        .font(.subheadline)
+                        .fontWeight(.bold)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 8)
+                .background(
+                    Capsule()
+                        .fill(tradeType == .sell ? Color.theme.red : Color.clear)
+                )
+                .foregroundStyle(tradeType == .sell ? Color.white : Color.theme.secondaryText)
+            }
+            .buttonStyle(.plain)
         }
+        .padding(4)
+        .background(
+            Capsule()
+                .fill(Color.theme.secondaryText.opacity(0.08))
+        )
+    }
+    
+    // MARK: - Coin Header Card
+    private func coinHeaderCard(coin: CoinModel, currentHolding: Double, currentHoldingValue: Double) -> some View {
+        VStack(spacing: 12) {
+            HStack(spacing: 12) {
+                CoinImageView(coin: coin)
+                    .frame(width: 42, height: 42)
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(coin.name)
+                        .font(.headline)
+                        .fontWeight(.bold)
+                        .foregroundStyle(Color.theme.accent)
+                    
+                    HStack(spacing: 6) {
+                        Text(coin.symbol.uppercased())
+                            .font(.caption)
+                            .fontWeight(.bold)
+                            .foregroundStyle(Color.theme.secondaryText)
+                        
+                        Text("Rank #\(coin.rank)")
+                            .font(.caption2)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color.theme.secondaryText.opacity(0.1))
+                            .clipShape(Capsule())
+                            .foregroundStyle(Color.theme.secondaryText)
+                    }
+                }
+                
+                Spacer()
+                
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text(coin.currentPrice.asFormattedPrice())
+                        .font(.headline)
+                        .fontWeight(.bold)
+                        .foregroundStyle(Color.theme.accent)
+                    
+                    Text(coin.priceChangePercentage24H?.asPercentString() ?? "0.0%")
+                        .font(.caption)
+                        .fontWeight(.bold)
+                        .foregroundStyle((coin.priceChangePercentage24H ?? 0) >= 0 ? Color.theme.green : Color.theme.red)
+                }
+            }
+            
+            Divider()
+            
+            // Available Balance Row
+            HStack {
+                HStack(spacing: 6) {
+                    Image(systemName: "briefcase.fill")
+                        .font(.caption)
+                        .foregroundStyle(Color.theme.secondaryText)
+                    Text("Crypto Holdings:")
+                        .font(.caption)
+                        .foregroundStyle(Color.theme.secondaryText)
+                }
+                
+                Spacer()
+                
+                Text("\(currentHolding.asNumberString()) \(coin.symbol.uppercased()) (\(currentHoldingValue.asCurrencyWith2Decimals()))")
+                    .font(.caption)
+                    .fontWeight(.bold)
+                    .foregroundStyle(Color.theme.accent)
+            }
+            
+            Divider()
+            
+            // Available USD Cash Wallet Row
+            HStack {
+                HStack(spacing: 6) {
+                    Image(systemName: "banknote.fill")
+                        .font(.caption)
+                        .foregroundStyle(Color.theme.green)
+                    Text("USD Cash Wallet:")
+                        .font(.caption)
+                        .foregroundStyle(Color.theme.secondaryText)
+                }
+                
+                Spacer()
+                
+                Text(vm.cashBalance.asCurrencyWith2Decimals())
+                    .font(.caption)
+                    .fontWeight(.bold)
+                    .foregroundStyle(Color.theme.green)
+            }
+        }
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color.theme.background)
+                .shadow(color: Color.theme.accent.opacity(0.04), radius: 6, x: 0, y: 2)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Color.theme.secondaryText.opacity(0.1), lineWidth: 1)
+        )
+    }
+    
+    // MARK: - Order Input Card
+    private func orderInputCard(coin: CoinModel, currentHolding: Double) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Picker("Input Mode", selection: $inputMode) {
+                    ForEach(InputMode.allCases) { mode in
+                        Text(mode.rawValue).tag(mode)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .frame(maxWidth: 190)
+                
+                Spacer()
+                
+                Button("Clear") {
+                    quantityText = ""
+                    fiatText = ""
+                }
+                .font(.caption)
+                .fontWeight(.semibold)
+                .foregroundStyle(Color.theme.red)
+                .opacity((quantityText.isEmpty && fiatText.isEmpty) ? 0 : 1)
+            }
+            
+            // Main Amount Field
+            HStack {
+                if inputMode == .fiat {
+                    Text("$")
+                        .font(.system(size: 28, weight: .bold, design: .rounded))
+                        .foregroundStyle(Color.theme.secondaryText)
+                    
+                    TextField("0.00", text: $fiatText)
+                        .font(.system(size: 28, weight: .bold, design: .rounded))
+                        .keyboardType(.decimalPad)
+                        .onChange(of: fiatText) { _, newFiat in
+                            syncFromFiat(newFiat: newFiat, price: coin.currentPrice)
+                        }
+                } else {
+                    TextField("0.00", text: $quantityText)
+                        .font(.system(size: 28, weight: .bold, design: .rounded))
+                        .keyboardType(.decimalPad)
+                        .onChange(of: quantityText) { _, newQty in
+                            syncFromQuantity(newQty: newQty, price: coin.currentPrice)
+                        }
+                    
+                    Text(coin.symbol.uppercased())
+                        .font(.headline)
+                        .fontWeight(.bold)
+                        .foregroundStyle(Color.theme.secondaryText)
+                }
+            }
+            .padding(14)
+            .background(
+                RoundedRectangle(cornerRadius: 14)
+                    .fill(Color.theme.secondaryText.opacity(0.08))
+            )
+            
+            // Equivalent Subtitle
+            if inputMode == .fiat {
+                let qty = Double(quantityText) ?? 0
+                Text("≈ \(qty.asNumberString()) \(coin.symbol.uppercased())")
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(Color.theme.secondaryText)
+            } else {
+                let val = (Double(quantityText) ?? 0) * coin.currentPrice
+                Text("≈ \(val.asCurrencyWith2Decimals())")
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(Color.theme.secondaryText)
+            }
+            
+            // Smart Shortcuts: Buy Presets vs Sell Percentage Chips
+            if tradeType == .buy {
+                // Buy USD Presets
+                HStack(spacing: 6) {
+                    ForEach([50.0, 100.0, 500.0, 1000.0], id: \.self) { amount in
+                        Button {
+                            setFiatAmount(amount: amount, price: coin.currentPrice)
+                        } label: {
+                            Text("+$\(Int(amount))")
+                                .font(.caption2)
+                                .fontWeight(.bold)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 6)
+                                .background(Color.theme.green.opacity(0.1))
+                                .clipShape(Capsule())
+                                .foregroundStyle(Color.theme.green)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.top, 2)
+            } else {
+                // Sell Percentage Chips (25%, 50%, 75%, MAX)
+                HStack(spacing: 8) {
+                    ForEach([0.25, 0.50, 0.75, 1.0], id: \.self) { fraction in
+                        let title = fraction == 1.0 ? "MAX" : "\(Int(fraction * 100))%"
+                        Button {
+                            setSellFraction(fraction: fraction, currentHolding: currentHolding, price: coin.currentPrice)
+                        } label: {
+                            Text(title)
+                                .font(.caption2)
+                                .fontWeight(.bold)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 6)
+                                .background(Color.theme.red.opacity(fraction == 1.0 ? 0.2 : 0.1))
+                                .clipShape(Capsule())
+                                .foregroundStyle(Color.theme.red)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.top, 2)
+            }
+        }
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color.theme.background)
+                .shadow(color: Color.theme.accent.opacity(0.04), radius: 6, x: 0, y: 2)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Color.theme.secondaryText.opacity(0.1), lineWidth: 1)
+        )
+    }
+    
+    // MARK: - Order Summary Card
+    private func orderSummaryCard(
+        coin: CoinModel,
+        tradeAmount: Double,
+        totalOrderValue: Double,
+        currentHolding: Double,
+        resultingHolding: Double,
+        isInsufficientBalance: Bool,
+        isInsufficientCash: Bool
+    ) -> some View {
+        VStack(spacing: 10) {
+            // Insufficient Balance Warning Banner
+            if isInsufficientBalance {
+                HStack(spacing: 8) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundStyle(Color.theme.red)
+                    Text("Insufficient balance. You only hold \(currentHolding.asNumberString()) \(coin.symbol.uppercased()).")
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(Color.theme.red)
+                    Spacer()
+                }
+                .padding(10)
+                .background(Color.theme.red.opacity(0.1))
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+            }
+            
+            // Insufficient USD Cash Wallet Banner
+            if isInsufficientCash {
+                HStack(spacing: 8) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundStyle(Color.theme.red)
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Insufficient USD Cash Wallet Funds")
+                            .font(.caption)
+                            .fontWeight(.bold)
+                            .foregroundStyle(Color.theme.red)
+                        Text("Available: \(vm.cashBalance.asCurrencyWith2Decimals()) | Order: \(totalOrderValue.asCurrencyWith2Decimals())")
+                            .font(.caption2)
+                            .foregroundStyle(Color.theme.secondaryText)
+                    }
+                    
+                    Spacer()
+                    
+                    Button {
+                        vm.depositCash(amount: 5000)
+                        HapticManager.notification(type: .success)
+                    } label: {
+                        Text("+$5,000")
+                            .font(.caption2)
+                            .fontWeight(.bold)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Color.theme.green)
+                            .foregroundStyle(Color.white)
+                            .clipShape(Capsule())
+                    }
+                }
+                .padding(10)
+                .background(Color.theme.red.opacity(0.1))
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+            }
+            
+            HStack {
+                Text("Execution Price")
+                    .font(.caption)
+                    .foregroundStyle(Color.theme.secondaryText)
+                Spacer()
+                Text(coin.currentPrice.asFormattedPrice())
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(Color.theme.accent)
+            }
+            
+            Divider()
+            
+            HStack {
+                Text("Order Amount")
+                    .font(.caption)
+                    .foregroundStyle(Color.theme.secondaryText)
+                Spacer()
+                Text("\(tradeAmount.asNumberString()) \(coin.symbol.uppercased())")
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(tradeType == .buy ? Color.theme.green : Color.theme.red)
+            }
+            
+            Divider()
+            
+            HStack {
+                Text(tradeType == .buy ? "Total Purchase Cost" : "Total Sale Proceeds")
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundStyle(Color.theme.accent)
+                Spacer()
+                Text(totalOrderValue.asCurrencyWith2Decimals())
+                    .font(.headline)
+                    .fontWeight(.bold)
+                    .foregroundStyle(tradeType == .buy ? Color.theme.green : Color.theme.red)
+            }
+            
+            Divider()
+            
+            HStack {
+                Text("Resulting Position")
+                    .font(.caption)
+                    .foregroundStyle(Color.theme.secondaryText)
+                Spacer()
+                HStack(spacing: 4) {
+                    Text("\(currentHolding.asNumberString())")
+                        .foregroundStyle(Color.theme.secondaryText)
+                    Image(systemName: "arrow.right")
+                        .font(.caption2)
+                        .foregroundStyle(Color.theme.secondaryText)
+                    Text("\(resultingHolding.asNumberString()) \(coin.symbol.uppercased())")
+                        .fontWeight(.bold)
+                        .foregroundStyle(Color.theme.accent)
+                }
+                .font(.caption)
+            }
+        }
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color.theme.background)
+                .shadow(color: Color.theme.accent.opacity(0.04), radius: 6, x: 0, y: 2)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(isInsufficientBalance ? Color.theme.red.opacity(0.4) : Color.theme.secondaryText.opacity(0.1), lineWidth: 1)
+        )
+    }
+    
+    // MARK: - Order Action Button
+    private func orderActionButton(
+        coin: CoinModel,
+        tradeAmount: Double,
+        canExecute: Bool,
+        isInsufficientBalance: Bool,
+        isInsufficientCash: Bool
+    ) -> some View {
+        let isBuy = tradeType == .buy
+        let actionColor = isBuy ? Color.theme.green : Color.theme.red
+        
+        var buttonTitle: String {
+            if orderExecuted {
+                return "Order Executed!"
+            } else if tradeAmount <= 0 {
+                return "Enter Amount"
+            } else if isInsufficientCash {
+                return "Insufficient Cash Wallet Funds"
+            } else if isInsufficientBalance {
+                return "Insufficient \(coin.symbol.uppercased()) Balance"
+            } else {
+                return "\(tradeType.title) \(coin.symbol.uppercased())"
+            }
+        }
+        
+        return Button {
+            executeTrade(coin: coin, amount: tradeAmount)
+        } label: {
+            HStack(spacing: 8) {
+                if orderExecuted {
+                    Image(systemName: "checkmark.circle.fill")
+                    Text("Order Executed!")
+                } else {
+                    if canExecute {
+                        Image(systemName: isBuy ? "arrow.down.left" : "arrow.up.right")
+                    }
+                    Text(buttonTitle)
+                }
+            }
+            .font(.subheadline)
+            .fontWeight(.bold)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+            .background(canExecute ? actionColor : Color.theme.secondaryText.opacity(0.2))
+            .foregroundStyle(canExecute ? Color.white : Color.theme.secondaryText)
+            .clipShape(Capsule())
+            .shadow(color: canExecute ? actionColor.opacity(0.25) : Color.clear, radius: 6, x: 0, y: 3)
+        }
+        .disabled(!canExecute || orderExecuted)
+        .buttonStyle(.plain)
+    }
+    
+    // MARK: - Coin Specific Transaction History
+    private func coinTradeHistorySection(transactions: [TransactionEntity], symbol: String) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("\(symbol) Trade History")
+                    .font(.caption)
+                    .fontWeight(.bold)
+                    .foregroundStyle(Color.theme.secondaryText)
+                
+                Spacer()
+                
+                Text("\(transactions.count) orders")
+                    .font(.caption2)
+                    .foregroundStyle(Color.theme.secondaryText)
+            }
+            
+            VStack(spacing: 8) {
+                ForEach(transactions.prefix(4), id: \.id) { tx in
+                    let isBuy = (tx.transactionType ?? "").uppercased() == "BUY"
+                    HStack {
+                        HStack(spacing: 6) {
+                            Text(isBuy ? "BUY" : "SELL")
+                                .font(.system(size: 9, weight: .bold))
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background((isBuy ? Color.theme.green : Color.theme.red).opacity(0.15))
+                                .foregroundStyle(isBuy ? Color.theme.green : Color.theme.red)
+                                .clipShape(Capsule())
+                            
+                            Text((tx.timestamp ?? Date()).formatted(date: .abbreviated, time: .shortened))
+                                .font(.caption2)
+                                .foregroundStyle(Color.theme.secondaryText)
+                        }
+                        
+                        Spacer()
+                        
+                        VStack(alignment: .trailing, spacing: 1) {
+                            Text((isBuy ? "+" : "-") + "\(tx.amount.asNumberString()) \(symbol)")
+                                .font(.caption)
+                                .fontWeight(.semibold)
+                                .foregroundStyle(isBuy ? Color.theme.green : Color.theme.red)
+                            
+                            Text(tx.totalValue.asCurrencyWith2Decimals())
+                                .font(.caption2)
+                                .foregroundStyle(Color.theme.secondaryText)
+                        }
+                    }
+                    .padding(.vertical, 4)
+                    
+                    if tx.id != transactions.prefix(4).last?.id {
+                        Divider()
+                    }
+                }
+            }
+            .padding(12)
+            .background(
+                RoundedRectangle(cornerRadius: 14)
+                    .fill(Color.theme.background)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 14)
+                    .stroke(Color.theme.secondaryText.opacity(0.08), lineWidth: 1)
+            )
+        }
+        .padding(.top, 8)
+    }
+}
+
+// MARK: - Logic & Sync Helpers
+extension PortfolioView {
+    
+    private func openTradeStudio(for coin: CoinModel, type: TransactionType) {
+        activeCoin = coin
+        tradeType = type
+        quantityText = ""
+        fiatText = ""
     }
     
     private func syncFromQuantity(newQty: String, price: Double) {
@@ -725,27 +1101,40 @@ extension PortfolioView {
         }
     }
     
-    private func addIncrement(increment: Double, price: Double) {
-        let current = Double(quantityText) ?? 0
-        let updated = current + increment
-        quantityText = String(format: updated.truncatingRemainder(dividingBy: 1) == 0 ? "%.0f" : "%.2f", updated)
-        fiatText = String(format: "%.2f", updated * price)
+    private func setFiatAmount(amount: Double, price: Double) {
+        inputMode = .fiat
+        fiatText = String(format: "%.0f", amount)
+        let qty = amount / price
+        quantityText = String(format: "%.4f", qty)
         HapticManager.notification(type: .success)
     }
     
-    private func saveHolding(for coin: CoinModel) {
-        let amount = Double(quantityText) ?? 0
-        vm.updatePortfolio(coin: coin, amount: amount)
+    private func setSellFraction(fraction: Double, currentHolding: Double, price: Double) {
+        inputMode = .token
+        let qtyToSell = currentHolding * fraction
+        quantityText = qtyToSell.truncatingRemainder(dividingBy: 1) == 0 ? String(format: "%.0f", qtyToSell) : String(format: "%.4f", qtyToSell)
+        fiatText = String(format: "%.2f", qtyToSell * price)
+        HapticManager.notification(type: .success)
+    }
+    
+    private func executeTrade(coin: CoinModel, amount: Double) {
+        let success = vm.executeOrder(coin: coin, type: tradeType, amount: amount, pricePerCoin: coin.currentPrice)
+        guard success else {
+            HapticManager.notification(type: .error)
+            return
+        }
         
         withAnimation(.easeIn) {
-            showCheckMark = true
+            orderExecuted = true
         }
         HapticManager.notification(type: .success)
         UIApplication.shared.endEditing()
         
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
             withAnimation {
-                showCheckMark = false
+                orderExecuted = false
+                quantityText = ""
+                fiatText = ""
                 if initialCoin != nil {
                     dismiss()
                 } else {

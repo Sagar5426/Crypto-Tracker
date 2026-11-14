@@ -25,6 +25,7 @@ struct DetailView: View {
     @StateObject var vm: DetailViewModel
     @State private var showFullDescription: Bool = false
     @State private var showPortfolioSheet: Bool = false
+    @State private var tradeTypeToOpen: TransactionType = .buy
     
     private let columns: [GridItem] = [
         GridItem(.flexible(), spacing: 12),
@@ -69,13 +70,16 @@ struct DetailView: View {
         .background(Color.theme.background.ignoresSafeArea())
         .navigationTitle(vm.coin.name)
         .navigationBarTitleDisplayMode(.inline)
+        .safeAreaInset(edge: .bottom) {
+            bottomTradeActionBar
+        }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 navigationBarTrailingItem
             }
         }
         .sheet(isPresented: $showPortfolioSheet) {
-            PortfolioView(selectedCoin: vm.coin)
+            PortfolioView(selectedCoin: vm.coin, initialTradeType: tradeTypeToOpen)
                 .environmentObject(homeVM)
         }
     }
@@ -132,20 +136,20 @@ extension DetailView {
                 
                 Spacer()
                 
-                // Watchlist Star Quick Action
-                Button {
-                    withAnimation {
-                        homeVM.toggleWatchlist(coin: vm.coin)
+                    Button {
+                        withAnimation {
+                            homeVM.toggleWatchlist(coin: vm.coin)
+                        }
+                    } label: {
+                        Image(systemName: isCoinWatchlisted ? "star.fill" : "star")
+                            .font(.system(size: 18))
+                            .foregroundStyle(isCoinWatchlisted ? Color.yellow : Color.theme.secondaryText)
+                            .padding(6)
+                            .background(Color.theme.secondaryText.opacity(0.08))
+                            .clipShape(Circle())
                     }
-                } label: {
-                    Image(systemName: isCoinWatchlisted ? "star.fill" : "star")
-                        .font(.title3)
-                        .foregroundStyle(isCoinWatchlisted ? Color.yellow : Color.theme.secondaryText)
-                        .padding(8)
-                        .background(Color.theme.secondaryText.opacity(0.08))
-                        .clipShape(Circle())
-                }
-                .buttonStyle(.plain)
+                    .buttonStyle(.plain)
+                
             }
             
             // 24H Price Range Bar
@@ -261,17 +265,36 @@ extension DetailView {
                 
                 Spacer()
                 
-                Button {
-                    showPortfolioSheet.toggle()
-                } label: {
-                    Text("Edit")
-                        .font(.caption)
-                        .fontWeight(.bold)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 6)
-                        .background(Color.theme.accent)
-                        .foregroundStyle(Color.theme.background)
-                        .clipShape(Capsule())
+                HStack(spacing: 8) {
+                    Button {
+                        tradeTypeToOpen = .buy
+                        showPortfolioSheet.toggle()
+                        HapticManager.notification(type: .success)
+                    } label: {
+                        Text("Buy")
+                            .font(.caption)
+                            .fontWeight(.bold)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(Color.theme.green.opacity(0.15))
+                            .foregroundStyle(Color.theme.green)
+                            .clipShape(Capsule())
+                    }
+                    
+                    Button {
+                        tradeTypeToOpen = .sell
+                        showPortfolioSheet.toggle()
+                        HapticManager.notification(type: .success)
+                    } label: {
+                        Text("Sell")
+                            .font(.caption)
+                            .fontWeight(.bold)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(Color.theme.red.opacity(0.15))
+                            .foregroundStyle(Color.theme.red)
+                            .clipShape(Capsule())
+                    }
                 }
             }
             .padding(14)
@@ -494,6 +517,61 @@ extension DetailView {
             CoinImageView(coin: vm.coin)
                 .frame(width: 26, height: 26)
         }
+    }
+    // MARK: - Bottom Trade Action Bar
+    private var bottomTradeActionBar: some View {
+        HStack(spacing: 10) {
+            // Small Pill Buy Button
+            Button {
+                tradeTypeToOpen = .buy
+                showPortfolioSheet = true
+                HapticManager.notification(type: .success)
+            } label: {
+                HStack(spacing: 5) {
+                    Image(systemName: "arrow.down.left")
+                        .font(.system(size: 11, weight: .bold))
+                    Text("Buy \(vm.coin.symbol.uppercased())")
+                        .font(.system(size: 13, weight: .bold))
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(Color.theme.green)
+                .foregroundStyle(Color.white)
+                .clipShape(Capsule())
+            }
+            .buttonStyle(.plain)
+            
+            // Small Pill Sell Button
+            Button {
+                tradeTypeToOpen = .sell
+                showPortfolioSheet = true
+                HapticManager.notification(type: .success)
+            } label: {
+                HStack(spacing: 5) {
+                    Image(systemName: "arrow.up.right")
+                        .font(.system(size: 11, weight: .bold))
+                    Text("Sell \(vm.coin.symbol.uppercased())")
+                        .font(.system(size: 13, weight: .bold))
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(Color.theme.red)
+                .foregroundStyle(Color.white)
+                .clipShape(Capsule())
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(5)
+        .background(
+            Capsule()
+                .fill(Color.theme.background)
+                .shadow(color: Color.theme.accent.opacity(0.12), radius: 10, x: 0, y: 4)
+        )
+        .overlay(
+            Capsule()
+                .stroke(Color.theme.secondaryText.opacity(0.15), lineWidth: 1)
+        )
+        .padding(.bottom, 6)
     }
 }
 

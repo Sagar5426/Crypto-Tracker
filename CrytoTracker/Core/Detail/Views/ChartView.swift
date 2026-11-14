@@ -6,15 +6,14 @@
 //
 
 import SwiftUI
+import Charts
 
 struct ChartView: View {
-    
     let coin: CoinModel
     @StateObject private var chartService: MarketChartDataService
+    
     @State private var selectedRange: ChartTimeRange = .week
-    @State private var percentage: CGFloat = 0
-    @State private var scrubbedPoint: ChartPoint? = nil
-    @State private var scrubLocationX: CGFloat? = nil
+    @State private var selectedDate: Date? = nil
     
     init(coin: CoinModel) {
         self.coin = coin
@@ -29,16 +28,34 @@ struct ChartView: View {
         points.map { $0.price }
     }
     
-    private var maxY: Double {
+    private var rawMaxY: Double {
         prices.max() ?? (coin.currentPrice * 1.05)
     }
     
-    private var minY: Double {
+    private var rawMinY: Double {
         prices.min() ?? (coin.currentPrice * 0.95)
+    }
+    
+    private var yPadding: Double {
+        let diff = rawMaxY - rawMinY
+        return diff > 0 ? diff * 0.08 : (rawMaxY * 0.05)
+    }
+    
+    private var domainMinY: Double {
+        max(0, rawMinY - yPadding)
+    }
+    
+    private var domainMaxY: Double {
+        rawMaxY + yPadding
     }
     
     private var startingPrice: Double {
         prices.first ?? coin.currentPrice
+    }
+    
+    private var scrubbedPoint: ChartPoint? {
+        guard let date = selectedDate, !points.isEmpty else { return nil }
+        return points.min(by: { abs($0.date.timeIntervalSince(date)) < abs($1.date.timeIntervalSince(date)) })
     }
     
     private var activePrice: Double {
@@ -58,45 +75,30 @@ struct ChartView: View {
         priceDifference >= 0 ? Color.theme.green : Color.theme.red
     }
     
-    private var startingDate: Date {
-        points.first?.date ?? Date().addingTimeInterval(-7 * 24 * 3600)
-    }
-    
-    private var endingDate: Date {
-        points.last?.date ?? Date()
-    }
-    
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 14) {
             chartHeaderView
             
             timeRangePicker
             
-            VStack(spacing: 8) {
-                chartContainer
-                    .frame(height: 220)
-                
-                chartDateLabels
-            }
+            chartContent
+                .frame(height: 230)
+                .padding(.top, 4)
         }
         .padding(.horizontal)
-        .onAppear {
-            animateChart()
-        }
-        .onChange(of: chartService.chartPoints) { _, _ in
-            animateChart()
-        }
-    }
-    
-    private func animateChart() {
-        percentage = 0
-        withAnimation(.easeOut(duration: 1.2)) {
-            percentage = 1
+        .onChange(of: selectedDate) { oldValue, newValue in
+            if let newDate = newValue, let oldDate = oldValue {
+                if abs(newDate.timeIntervalSince(oldDate)) > 10 {
+                    HapticManager.notification(type: .warning)
+                }
+            } else if newValue != nil {
+                HapticManager.notification(type: .warning)
+            }
         }
     }
 }
 
-// MARK: - Subviews
+// MARK: - Subviews & Components
 extension ChartView {
     
     private var chartHeaderView: some View {
@@ -111,13 +113,13 @@ extension ChartView {
                 
                 if chartService.isLoading {
                     ProgressView()
-                        .scaleEffect(0.8)
+                        .scaleEffect(0.85)
                 }
             }
             
             HStack(spacing: 6) {
-                Image(systemName: priceDifference >= 0 ? "triangle.fill" : "triangle.fill")
-                    .font(.caption2)
+                Image(systemName: "triangle.fill")
+                    .font(.system(size: 8))
                     .rotationEffect(Angle(degrees: priceDifference >= 0 ? 0 : 180))
                 
                 Text(priceDifference >= 0 ? "+" : "")
@@ -143,10 +145,9 @@ extension ChartView {
             ForEach(ChartTimeRange.allCases) { range in
                 Button {
                     guard selectedRange != range else { return }
-                    withAnimation(.easeInOut(duration: 0.25)) {
+                    withAnimation(.easeInOut(duration: 0.2)) {
                         selectedRange = range
-                        scrubbedPoint = nil
-                        scrubLocationX = nil
+                        selectedDate = nil
                     }
                     chartService.getChartData(for: range)
                     HapticManager.notification(type: .success)
@@ -169,172 +170,119 @@ extension ChartView {
                 .buttonStyle(.plain)
             }
         }
-        .padding(.vertical, 4)
     }
     
-    private var chartContainer: some View {
-        GeometryReader { geometry in
-            ZStack(alignment: .leading) {
-                chartGridBackground
+    @ViewBuilder
+    private var chartContent: some View {
+        if points.count > 1 {
+            Chart {
+                // Gradient Area Fill
+                ForEach(points) { point in
+                    AreaMark(
+                        x: .value("Date", point.date),
+                        yStart: .value("Base", domainMinY),
+                        yEnd: .value("Price", point.price)
+                    )
+                    .interpolationMethod(.monotone)
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [lineColor.opacity(0.35), lineColor.opacity(0.01)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                }
                 
-                chartYAxisLabels
+                // Primary Price Line
+                ForEach(points) { point in
+                    LineMark(
+                        x: .value("Date", point.date),
+                        y: .value("Price", point.price)
+                    )
+                    .interpolationMethod(.monotone)
+                    .lineStyle(StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round))
+                    .foregroundStyle(lineColor)
+                }
                 
-                if prices.count > 1 {
-                    chartFillArea(geometry: geometry)
-                    chartStrokeLine(geometry: geometry)
+                // Scrubbing Cursor Indicator
+                if let scrub = scrubbedPoint {
+                    RuleMark(x: .value("Scrub Date", scrub.date))
+                        .lineStyle(StrokeStyle(lineWidth: 1.5, dash: [4, 4]))
+                        .foregroundStyle(Color.theme.secondaryText.opacity(0.75))
                     
-                    if let scrubX = scrubLocationX, let scrubPoint = scrubbedPoint {
-                        chartScrubOverlay(geometry: geometry, xPosition: scrubX, point: scrubPoint)
+                    PointMark(
+                        x: .value("Scrub Date", scrub.date),
+                        y: .value("Scrub Price", scrub.price)
+                    )
+                    .symbol {
+                        Circle()
+                            .fill(lineColor)
+                            .frame(width: 12, height: 12)
+                            .overlay(
+                                Circle()
+                                    .stroke(Color.white, lineWidth: 2.5)
+                            )
+                            .shadow(color: lineColor.opacity(0.8), radius: 6)
                     }
-                } else {
-                    ProgressView()
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
             }
-            .contentShape(Rectangle())
-            .gesture(
-                DragGesture(minimumDistance: 0)
-                    .onChanged { value in
-                        handleDrag(at: value.location, in: geometry)
-                    }
-                    .onEnded { _ in
-                        withAnimation(.easeOut(duration: 0.2)) {
-                            scrubbedPoint = nil
-                            scrubLocationX = nil
+            .chartYScale(domain: domainMinY...domainMaxY)
+            .chartXSelection(value: $selectedDate)
+            .chartYAxis {
+                AxisMarks(position: .leading, values: .automatic(desiredCount: 4)) { value in
+                    AxisGridLine(stroke: StrokeStyle(lineWidth: 0.8))
+                        .foregroundStyle(Color.theme.secondaryText.opacity(0.12))
+                    
+                    AxisValueLabel {
+                        if let doubleValue = value.as(Double.self) {
+                            Text(doubleValue.formattedWithAbbreviations())
+                                .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                                .foregroundStyle(Color.theme.secondaryText.opacity(0.85))
                         }
                     }
-            )
-        }
-    }
-    
-    private func handleDrag(at location: CGPoint, in geometry: GeometryProxy) {
-        guard prices.count > 1 else { return }
-        let clampedX = min(max(0, location.x), geometry.size.width)
-        let step = geometry.size.width / CGFloat(points.count - 1)
-        let rawIndex = Int(round(clampedX / step))
-        let clampedIndex = min(max(0, rawIndex), points.count - 1)
-        
-        let newPoint = points[clampedIndex]
-        if scrubbedPoint?.id != newPoint.id {
-            HapticManager.notification(type: .warning)
-        }
-        scrubbedPoint = newPoint
-        scrubLocationX = CGFloat(clampedIndex) * step
-    }
-    
-    private func chartStrokeLine(geometry: GeometryProxy) -> some View {
-        Path { path in
-            guard prices.count > 1 else { return }
-            let yRange = max(maxY - minY, 0.000001)
-            let stepX = geometry.size.width / CGFloat(prices.count - 1)
-            
-            for index in prices.indices {
-                let xPos = CGFloat(index) * stepX
-                let yPos = (1.0 - CGFloat((prices[index] - minY) / yRange)) * geometry.size.height
-                
-                if index == 0 {
-                    path.move(to: CGPoint(x: xPos, y: yPos))
-                } else {
-                    path.addLine(to: CGPoint(x: xPos, y: yPos))
                 }
             }
-        }
-        .trim(from: 0, to: percentage)
-        .stroke(lineColor, style: StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round))
-        .shadow(color: lineColor.opacity(0.4), radius: 8, x: 0, y: 6)
-    }
-    
-    private func chartFillArea(geometry: GeometryProxy) -> some View {
-        Path { path in
-            guard prices.count > 1 else { return }
-            let yRange = max(maxY - minY, 0.000001)
-            let stepX = geometry.size.width / CGFloat(prices.count - 1)
-            let height = geometry.size.height
-            
-            path.move(to: CGPoint(x: 0, y: height))
-            for index in prices.indices {
-                let xPos = CGFloat(index) * stepX
-                let yPos = (1.0 - CGFloat((prices[index] - minY) / yRange)) * height
-                path.addLine(to: CGPoint(x: xPos, y: yPos))
+            .chartXAxis {
+                AxisMarks(values: .automatic(desiredCount: 3)) { value in
+                    AxisGridLine(stroke: StrokeStyle(lineWidth: 0.8))
+                        .foregroundStyle(Color.theme.secondaryText.opacity(0.08))
+                    
+                    AxisValueLabel {
+                        if let dateValue = value.as(Date.self) {
+                            Text(formatDateForAxis(dateValue))
+                                .font(.system(size: 10, weight: .medium))
+                                .foregroundStyle(Color.theme.secondaryText)
+                        }
+                    }
+                }
             }
-            path.addLine(to: CGPoint(x: geometry.size.width, y: height))
-            path.closeSubpath()
-        }
-        .fill(
-            LinearGradient(
-                colors: [lineColor.opacity(0.35), lineColor.opacity(0.01)],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-        )
-        .opacity(percentage)
-    }
-    
-    private func chartScrubOverlay(geometry: GeometryProxy, xPosition: CGFloat, point: ChartPoint) -> some View {
-        let yRange = max(maxY - minY, 0.000001)
-        let yPos = (1.0 - CGFloat((point.price - minY) / yRange)) * geometry.size.height
-        
-        return ZStack {
-            // Vertical cursor line
-            Path { path in
-                path.move(to: CGPoint(x: xPosition, y: 0))
-                path.addLine(to: CGPoint(x: xPosition, y: geometry.size.height))
+            .animation(.easeInOut(duration: 0.35), value: points)
+        } else {
+            ZStack {
+                Color.theme.secondaryText.opacity(0.04)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                
+                ProgressView()
+                    .scaleEffect(1.1)
             }
-            .stroke(Color.theme.secondaryText.opacity(0.6), style: StrokeStyle(lineWidth: 1, dash: [4, 4]))
-            
-            // Indicator Dot on line
-            Circle()
-                .fill(lineColor)
-                .frame(width: 12, height: 12)
-                .overlay(
-                    Circle()
-                        .stroke(Color.white, lineWidth: 2)
-                )
-                .shadow(color: lineColor.opacity(0.8), radius: 6)
-                .position(x: xPosition, y: yPos)
         }
     }
     
-    private var chartGridBackground: some View {
-        VStack {
-            Divider()
-                .background(Color.theme.secondaryText.opacity(0.15))
-            Spacer()
-            Divider()
-                .background(Color.theme.secondaryText.opacity(0.1))
-            Spacer()
-            Divider()
-                .background(Color.theme.secondaryText.opacity(0.15))
+    private func formatDateForAxis(_ date: Date) -> String {
+        switch selectedRange {
+        case .day:
+            let formatter = DateFormatter()
+            formatter.dateFormat = "HH:mm"
+            return formatter.string(from: date)
+        case .week, .month:
+            let formatter = DateFormatter()
+            formatter.dateFormat = "d MMM"
+            return formatter.string(from: date)
+        case .year, .all:
+            let formatter = DateFormatter()
+            formatter.dateFormat = "MMM yy"
+            return formatter.string(from: date)
         }
-    }
-    
-    private var chartYAxisLabels: some View {
-        VStack(alignment: .leading) {
-            Text(maxY.formattedWithAbbreviations())
-            Spacer()
-            Text(((maxY + minY) / 2).formattedWithAbbreviations())
-            Spacer()
-            Text(minY.formattedWithAbbreviations())
-        }
-        .font(.system(size: 10, weight: .semibold, design: .monospaced))
-        .foregroundStyle(Color.theme.secondaryText.opacity(0.8))
-        .padding(.horizontal, 4)
-    }
-    
-    private var chartDateLabels: some View {
-        HStack {
-            Text(startingDate.asDayMonthYearString())
-            Spacer()
-            if let scrub = scrubbedPoint {
-                Text(scrub.date.asDayMonthYearString())
-                    .fontWeight(.bold)
-                    .foregroundStyle(lineColor)
-                Spacer()
-            }
-            Text(endingDate.asDayMonthYearString())
-        }
-        .font(.caption2)
-        .foregroundStyle(Color.theme.secondaryText)
     }
 }
 
