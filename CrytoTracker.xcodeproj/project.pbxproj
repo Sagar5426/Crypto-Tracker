@@ -60,6 +60,7 @@
 		459ED37B30A8B9E900116335 /* NetworkingManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 459ED34030A8B9E900116335 /* NetworkingManager.swift */; };
 		459ED37C30A8B9E900116335 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 459ED34330A8B9E900116335 /* ContentView.swift */; };
 		459ED37D30A8B9E900116335 /* CrytoTrackerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 459ED34430A8B9E900116335 /* CrytoTrackerApp.swift */; };
+		459ED38230A8C13900116335 /* PortfolioCoinRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 459ED38130A8C13900116335 /* PortfolioCoinRowView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -117,6 +118,7 @@
 		459ED34430A8B9E900116335 /* CrytoTrackerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CrytoTrackerApp.swift; sourceTree = "<group>"; };
 		459ED34530A8B9E900116335 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		459ED34730A8B9E900116335 /* PortfolioContainer.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = PortfolioContainer.xcdatamodel; sourceTree = "<group>"; };
+		459ED38130A8C13900116335 /* PortfolioCoinRowView.swift */ = {isa = PBXFileReference; path = PortfolioCoinRowView.swift; sourceTree = "<group>"; };
 		45B438442E894416005778D8 /* CrytoTracker.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CrytoTracker.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -167,6 +169,7 @@
 				459ED30630A8B9E900116335 /* StatisticsView.swift */,
 				459ED30730A8B9E900116335 /* xMarkButton.swift */,
 				459ED31230A8B9E900116335 /* CoinRowView.swift */,
+				459ED38130A8C13900116335 /* PortfolioCoinRowView.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -472,6 +475,7 @@
 				459ED36730A8B9E900116335 /* PreviewProvider.swift in Sources */,
 				459ED36830A8B9E900116335 /* String.swift in Sources */,
 				459ED36930A8B9E900116335 /* UIApplication.swift in Sources */,
+				459ED38230A8C13900116335 /* PortfolioCoinRowView.swift in Sources */,
 				459ED36A30A8B9E900116335 /* CoinDetailModel.swift in Sources */,
 				459ED36B30A8B9E900116335 /* CoinModel.swift in Sources */,
 				459ED36C30A8B9E900116335 /* MarketChartModel.swift in Sources */,

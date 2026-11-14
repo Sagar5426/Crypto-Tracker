@@ -21,6 +21,7 @@ struct DetailLoadingView: View {
 }
 
 struct DetailView: View {
+    @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var homeVM: MarketViewModel
     @StateObject var vm: DetailViewModel
     @State private var showFullDescription: Bool = false
@@ -86,8 +87,19 @@ struct DetailView: View {
             bottomTradeActionBar
         }
         .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button {
+                    dismiss()
+                } label: {
+                    Image(systemName: "chevron.down")
+                        .font(.headline)
+                        .foregroundStyle(Color.theme.accent)
+                }
+            }
+            
             ToolbarItem(placement: .topBarTrailing) {
-                navigationBarTrailingItem
+                CoinImageView(coin: vm.coin)
+                    .frame(width: 30, height: 30)
             }
         }
         .sheet(isPresented: $showPortfolioSheet) {
@@ -433,83 +445,116 @@ extension DetailView {
         .padding(.bottom, 16)
     }
     
-    // MARK: - Trailing Navigation Item
-    private var navigationBarTrailingItem: some View {
-        HStack(spacing: 8) {
-            Button {
-                withAnimation {
-                    homeVM.toggleWatchlist(coin: vm.coin)
-                }
-            } label: {
-                Image(systemName: isCoinWatchlisted ? "star.fill" : "star")
-                    .font(.subheadline)
-                    .foregroundStyle(isCoinWatchlisted ? Color.yellow : Color.theme.secondaryText)
-            }
-            
-            CoinImageView(coin: vm.coin)
-                .frame(width: 26, height: 26)
-        }
-    }
+   
     // MARK: - Bottom Trade Action Bar
     private var bottomTradeActionBar: some View {
         HStack(spacing: 10) {
-            // Small Pill Buy Button
+            // Floating Buy Button
             Button {
                 tradeTypeToOpen = .buy
                 showPortfolioSheet = true
-                HapticManager.notification(type: .success)
+                HapticManager.impact(style: .medium)
             } label: {
-                HStack(spacing: 5) {
-                    Image(systemName: "arrow.down.left")
-                        .font(.system(size: 11, weight: .bold))
+                HStack(spacing: 8) {
+                    ZStack {
+                        Circle()
+                            .fill(Color.white.opacity(0.22))
+                            .frame(width: 26, height: 26)
+                        Image(systemName: "arrow.down.left")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(.white)
+                    }
+                    
                     Text("Buy \(vm.coin.symbol.uppercased())")
-                        .font(.system(size: 13, weight: .bold))
+                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white)
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
-                .background(Color.theme.green)
-                .foregroundStyle(Color.white)
+                .frame(maxWidth: .infinity)
+                .frame(height: 48)
+                .background(
+                    LinearGradient(
+                        colors: [Color.theme.green, Color.theme.green.opacity(0.85)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
                 .clipShape(Capsule())
+                .shadow(color: Color.theme.green.opacity(0.35), radius: 6, x: 0, y: 3)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(TradeActionButtonStyle())
             
-            // Small Pill Sell Button
+            // Floating Sell Button
             Button {
                 tradeTypeToOpen = .sell
                 showPortfolioSheet = true
-                HapticManager.notification(type: .success)
+                HapticManager.impact(style: .medium)
             } label: {
-                HStack(spacing: 5) {
-                    Image(systemName: "arrow.up.right")
-                        .font(.system(size: 11, weight: .bold))
+                HStack(spacing: 8) {
+                    ZStack {
+                        Circle()
+                            .fill(Color.white.opacity(0.22))
+                            .frame(width: 26, height: 26)
+                        Image(systemName: "arrow.up.right")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(.white)
+                    }
+                    
                     Text("Sell \(vm.coin.symbol.uppercased())")
-                        .font(.system(size: 13, weight: .bold))
+                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white)
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
-                .background(Color.theme.red)
-                .foregroundStyle(Color.white)
+                .frame(maxWidth: .infinity)
+                .frame(height: 48)
+                .background(
+                    LinearGradient(
+                        colors: [Color.theme.red, Color.theme.red.opacity(0.85)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
                 .clipShape(Capsule())
+                .shadow(color: Color.theme.red.opacity(0.35), radius: 6, x: 0, y: 3)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(TradeActionButtonStyle())
         }
-        .padding(5)
+        .padding(6)
         .background(
             Capsule()
-                .fill(Color.theme.background)
-                .shadow(color: Color.theme.accent.opacity(0.12), radius: 10, x: 0, y: 4)
+                .fill(Color.theme.background.opacity(0.92))
+                .background(Capsule().fill(.ultraThinMaterial))
+                .shadow(color: Color.theme.accent.opacity(0.12), radius: 12, x: 0, y: 4)
         )
         .overlay(
             Capsule()
                 .stroke(Color.theme.secondaryText.opacity(0.15), lineWidth: 1)
         )
+        .padding(.horizontal, 16)
         .padding(.bottom, 6)
     }
 }
 
-#Preview {
+// MARK: - Trade Action Button Style
+private struct TradeActionButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.96 : 1.0)
+            .opacity(configuration.isPressed ? 0.92 : 1.0)
+            .animation(.spring(response: 0.25, dampingFraction: 0.7), value: configuration.isPressed)
+    }
+}
+
+#Preview("DetailView - Dark") {
     NavigationStack {
         DetailView(coin: DeveloperPreview.instance.coin)
             .environmentObject(DeveloperPreview.instance.homeVM)
     }
+    .preferredColorScheme(.dark)
+}
+
+#Preview("DetailView - Light") {
+    NavigationStack {
+        DetailView(coin: DeveloperPreview.instance.coin)
+            .environmentObject(DeveloperPreview.instance.homeVM)
+    }
+    .preferredColorScheme(.light)
 }

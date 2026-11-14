@@ -8,10 +8,16 @@
 import SwiftUI
 
 class HapticManager {
-    static private let generator = UINotificationFeedbackGenerator()
+    static private let notificationGenerator = UINotificationFeedbackGenerator()
     
     static func notification(type: UINotificationFeedbackGenerator.FeedbackType) {
-        generator.notificationOccurred(type)
+        notificationGenerator.notificationOccurred(type)
+    }
+    
+    static func impact(style: UIImpactFeedbackGenerator.FeedbackStyle = .medium) {
+        let generator = UIImpactFeedbackGenerator(style: style)
+        generator.prepare()
+        generator.impactOccurred()
     }
 }
 

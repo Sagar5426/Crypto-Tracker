@@ -9,15 +9,15 @@ import SwiftUI
 
 struct CoinRowView: View {
     let coin: CoinModel
-    let showHoldingColumn: Bool
+    var showHoldingColumn: Bool = false
     var isFavorite: Bool = false
     var onFavoriteTapped: (() -> Void)? = nil
     
     var body: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: 10) {
             leftColumn
             
-            Spacer(minLength: 4)
+            Spacer(minLength: 6)
             
             if showHoldingColumn {
                 centerColumn
@@ -27,8 +27,8 @@ struct CoinRowView: View {
             
             rightColumn
         }
-        .font(.subheadline)
-        .padding(.vertical, 2)
+        .padding(.vertical, 6)
+        .contentShape(Rectangle())
     }
 }
 
@@ -37,18 +37,26 @@ struct MiniSparklineView: View {
     let data: [Double]
     let isPositive: Bool
     
+    private var strokeColor: Color {
+        isPositive ? Color.theme.green : Color.theme.red
+    }
+    
     var body: some View {
         GeometryReader { geometry in
             if data.count > 1 {
                 let maxY = data.max() ?? 1
                 let minY = data.min() ?? 0
                 let yRange = max(maxY - minY, 0.000001)
+                let verticalInset: CGFloat = 2
+                let drawableHeight = max(geometry.size.height - (verticalInset * 2), 1)
                 let stepX = geometry.size.width / CGFloat(data.count - 1)
                 
-                Path { path in
+                let linePath = Path { path in
                     for index in data.indices {
                         let x = CGFloat(index) * stepX
-                        let y = (1.0 - CGFloat((data[index] - minY) / yRange)) * geometry.size.height
+                        let normalizedY = CGFloat((data[index] - minY) / yRange)
+                        let y = verticalInset + (1.0 - normalizedY) * drawableHeight
+                        
                         if index == 0 {
                             path.move(to: CGPoint(x: x, y: y))
                         } else {
@@ -56,10 +64,38 @@ struct MiniSparklineView: View {
                         }
                     }
                 }
-                .stroke(
-                    isPositive ? Color.theme.green : Color.theme.red,
-                    style: StrokeStyle(lineWidth: 1.5, lineCap: .round, lineJoin: .round)
-                )
+                
+                ZStack {
+                    // Subtle gradient fill under the sparkline
+                    linePath
+                        .applying(CGAffineTransform.identity)
+                        .fill(Color.clear)
+                        .overlay(
+                             Path { path in
+                                path.addPath(linePath)
+                                path.addLine(to: CGPoint(x: geometry.size.width, y: geometry.size.height))
+                                path.addLine(to: CGPoint(x: 0, y: geometry.size.height))
+                                path.closeSubpath()
+                            }
+                            .fill(
+                                LinearGradient(
+                                    colors: [
+                                        strokeColor.opacity(0.22),
+                                        strokeColor.opacity(0.0)
+                                    ],
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                )
+                            )
+                        )
+                    
+                    // Main sparkline stroke
+                    linePath
+                        .stroke(
+                            strokeColor,
+                            style: StrokeStyle(lineWidth: 1.6, lineCap: .round, lineJoin: .round)
+                        )
+                }
             }
         }
     }
@@ -68,120 +104,191 @@ struct MiniSparklineView: View {
 // MARK: - Subviews
 extension CoinRowView {
     
+    // MARK: - Left Column (Rank/Star, Icon, Symbol & Name)
     private var leftColumn: some View {
-        HStack(spacing: 8) {
-            if let onFavoriteTapped = onFavoriteTapped {
-                Button {
-                    onFavoriteTapped()
-                } label: {
-                    VStack(spacing: 2) {
-                        Text("\(coin.rank)")
-                            .font(.system(size: 10, weight: .bold, design: .monospaced))
-                            .foregroundStyle(Color.theme.secondaryText)
-                        
-                        Image(systemName: isFavorite ? "star.fill" : "star")
-                            .font(.system(size: 9))
-                            .foregroundStyle(isFavorite ? Color.yellow : Color.theme.secondaryText.opacity(0.35))
-                    }
-                    .frame(width: 20)
-                }
-                .buttonStyle(.plain)
-            } else {
-                Text("\(coin.rank)")
-                    .font(.system(size: 11, weight: .bold, design: .monospaced))
-                    .foregroundStyle(Color.theme.secondaryText)
-                    .frame(width: 20, alignment: .leading)
+        HStack(spacing: 10) {
+            rankAndFavoriteView
+            
+            ZStack {
+                Circle()
+                    .fill(Color.theme.secondaryText.opacity(0.06))
+                    .frame(width: 36, height: 36)
+                
+                CoinImageView(coin: coin)
+                    .frame(width: 30, height: 30)
+                    .clipShape(Circle())
             }
             
-            CoinImageView(coin: coin)
-                .frame(width: 32, height: 32)
-            
-            VStack(alignment: .leading, spacing: 2) {
-                Text(coin.symbol.uppercased())
-                    .font(.system(size: 15, weight: .bold))
-                    .foregroundStyle(Color.theme.accent)
-                    .lineLimit(1)
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: 5) {
+                    Text(coin.symbol.uppercased())
+                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .foregroundStyle(Color.theme.accent)
+                        .lineLimit(1)
+                    
+                    if isFavorite && onFavoriteTapped == nil {
+                        Image(systemName: "star.fill")
+                            .font(.system(size: 9))
+                            .foregroundStyle(Color.yellow)
+                    }
+                }
                 
                 Text(coin.name)
-                    .font(.system(size: 12))
+                    .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(Color.theme.secondaryText)
                     .lineLimit(1)
                     .truncationMode(.tail)
-                    .minimumScaleFactor(0.7)
             }
             .layoutPriority(1)
         }
     }
     
+    @ViewBuilder
+    private var rankAndFavoriteView: some View {
+        if let onFavoriteTapped = onFavoriteTapped {
+            Button(action: onFavoriteTapped) {
+                VStack(spacing: 3) {
+                    Text("\(coin.rank)")
+                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                        .monospacedDigit()
+                        .foregroundStyle(Color.theme.secondaryText)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.75)
+                    
+                    Image(systemName: isFavorite ? "star.fill" : "star")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(isFavorite ? Color.yellow : Color.theme.secondaryText.opacity(0.35))
+                }
+                .frame(width: 24, height: 34)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+        } else {
+            Text("\(coin.rank)")
+                .font(.system(size: 11, weight: .bold, design: .rounded))
+                .monospacedDigit()
+                .foregroundStyle(Color.theme.secondaryText)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+                .frame(width: 24, alignment: .center)
+        }
+    }
+    
+    // MARK: - Center Column (7D Sparkline or Holdings Value)
     private var miniSparkline: some View {
         MiniSparklineView(
             data: coin.sparklineIn7D?.price ?? [],
             isPositive: (coin.priceChangePercentage24H ?? 0) >= 0
         )
-        .frame(width: 38, height: 22)
-        .padding(.horizontal, 2)
+        .frame(width: 52, height: 26)
+        .padding(.horizontal, 4)
     }
     
     private var centerColumn: some View {
-        VStack(alignment: .trailing, spacing: 2) {
+        VStack(alignment: .trailing, spacing: 3) {
             Text(coin.currentHoldingsValue.asCurrencyWith2Decimals())
-                .font(.system(size: 14, weight: .bold))
+                .font(.system(size: 14, weight: .bold, design: .rounded))
+                .monospacedDigit()
                 .foregroundStyle(Color.theme.accent)
                 .lineLimit(1)
-                .minimumScaleFactor(0.7)
+                .minimumScaleFactor(0.75)
             
             Text("\((coin.currentHoldings ?? 0).asNumberString()) \(coin.symbol.uppercased())")
-                .font(.caption2)
+                .font(.system(size: 11, weight: .medium, design: .rounded))
+                .monospacedDigit()
                 .foregroundStyle(Color.theme.secondaryText)
                 .lineLimit(1)
-                .minimumScaleFactor(0.7)
+                .minimumScaleFactor(0.75)
         }
         .fixedSize(horizontal: true, vertical: false)
     }
     
+    // MARK: - Right Column (Live Price & Change / P&L Badge)
     private var rightColumn: some View {
-        let isPositive = showHoldingColumn ? (coin.profitLoss >= 0) : ((coin.priceChangePercentage24H ?? 0) >= 0)
-        let percentText = showHoldingColumn ? ((isPositive ? "+" : "") + coin.profitLossPercentage.asPercentString()) : (coin.priceChangePercentage24H?.asPercentString() ?? "0.00%")
+        let isPositive = showHoldingColumn
+            ? (coin.profitLoss >= 0)
+            : ((coin.priceChangePercentage24H ?? 0) >= 0)
         
-        return VStack(alignment: .trailing, spacing: 3) {
+        let rawPercent = showHoldingColumn
+            ? coin.profitLossPercentage.asPercentString()
+            : (coin.priceChangePercentage24H?.asPercentString() ?? "0.00%")
+        
+        let formattedPercent = (isPositive && !rawPercent.hasPrefix("+"))
+            ? "+\(rawPercent)"
+            : rawPercent
+        
+        let badgeColor = isPositive ? Color.theme.green : Color.theme.red
+        
+        return VStack(alignment: .trailing, spacing: 4) {
             Text(coin.currentPrice.asFormattedPrice())
-                .font(.system(size: 14, weight: .bold))
+                .font(.system(size: 14, weight: .bold, design: .rounded))
+                .monospacedDigit()
                 .foregroundStyle(Color.theme.accent)
                 .lineLimit(1)
-                .minimumScaleFactor(0.7)
+                .minimumScaleFactor(0.75)
             
-            HStack(spacing: 2) {
+            HStack(spacing: 2.5) {
                 Image(systemName: isPositive ? "arrow.up.right" : "arrow.down.right")
-                    .font(.system(size: 7, weight: .bold))
+                    .font(.system(size: 8, weight: .bold))
                 
-                Text(percentText)
-                    .font(.system(size: 10, weight: .bold))
+                Text(formattedPercent)
+                    .font(.system(size: 10, weight: .bold, design: .rounded))
+                    .monospacedDigit()
                     .lineLimit(1)
             }
-            .foregroundStyle(isPositive ? Color.theme.green : Color.theme.red)
-            .padding(.horizontal, 5)
-            .padding(.vertical, 2)
+            .foregroundStyle(badgeColor)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2.5)
             .background(
-                (isPositive ? Color.theme.green : Color.theme.red).opacity(0.12)
+                Capsule()
+                    .fill(badgeColor.opacity(0.12))
             )
-            .clipShape(Capsule())
         }
-        .fixedSize(horizontal: true, vertical: false)
+        .frame(minWidth: 88, alignment: .trailing)
     }
 }
 
-struct CoinRowView_Previews: PreviewProvider {
-    static var previews: some View {
-        Group {
-            CoinRowView(coin: DeveloperPreview.instance.coin, showHoldingColumn: false, isFavorite: true)
-                .previewDisplayName("Live Price Row")
-                .preferredColorScheme(.dark)
-                .previewLayout(.sizeThatFits)
-
-            CoinRowView(coin: DeveloperPreview.instance.coin, showHoldingColumn: true)
-                .previewDisplayName("Portfolio Row")
-                .preferredColorScheme(.light)
-                .previewLayout(.sizeThatFits)
-        }
+// MARK: - Previews
+#Preview("Market & Portfolio Rows - Dark") {
+    VStack(spacing: 12) {
+        CoinRowView(
+            coin: DeveloperPreview.instance.coin,
+            showHoldingColumn: false,
+            isFavorite: true,
+            onFavoriteTapped: {}
+        )
+        
+        Divider()
+            .background(Color.theme.secondaryText.opacity(0.15))
+        
+        CoinRowView(
+            coin: DeveloperPreview.instance.coin,
+            showHoldingColumn: true
+        )
     }
+    .padding(16)
+    .background(Color.theme.background)
+    .preferredColorScheme(.dark)
+}
+
+#Preview("Market & Portfolio Rows - Light") {
+    VStack(spacing: 12) {
+        CoinRowView(
+            coin: DeveloperPreview.instance.coin,
+            showHoldingColumn: false,
+            isFavorite: false,
+            onFavoriteTapped: {}
+        )
+        
+        Divider()
+            .background(Color.theme.secondaryText.opacity(0.15))
+        
+        CoinRowView(
+            coin: DeveloperPreview.instance.coin,
+            showHoldingColumn: true
+        )
+    }
+    .padding(16)
+    .background(Color.theme.background)
+    .preferredColorScheme(.light)
 }

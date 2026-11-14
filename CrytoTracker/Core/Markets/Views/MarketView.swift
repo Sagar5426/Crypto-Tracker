@@ -11,6 +11,7 @@ struct MarketView: View {
     
     @EnvironmentObject private var vm: MarketViewModel
     @State private var showSearchBar: Bool = false
+    @State private var selectedCoinForDetail: CoinModel? = nil
     
     var body: some View {
         NavigationStack {
@@ -73,8 +74,10 @@ struct MarketView: View {
                     }
                 }
             }
-            .navigationDestination(for: CoinModel.self) { coin in
-                DetailLoadingView(coin: .constant(coin))
+            .fullScreenCover(item: $selectedCoinForDetail) { coin in
+                NavigationStack {
+                    DetailView(coin: coin)
+                }
             }
         }
     }
@@ -129,7 +132,9 @@ extension MarketView {
             ScrollView(.horizontal, showsIndicators: false) {
                 LazyHStack(spacing: 10) {
                     ForEach(vm.topMovers) { coin in
-                        NavigationLink(value: coin) {
+                        Button {
+                            selectedCoinForDetail = coin
+                        } label: {
                             topMoverCard(coin: coin)
                         }
                         .buttonStyle(.plain)
@@ -233,7 +238,9 @@ extension MarketView {
     private var coinsLazyList: some View {
         LazyVStack(spacing: 8) {
             ForEach(vm.displayedCoins) { coin in
-                NavigationLink(value: coin) {
+                Button {
+                    selectedCoinForDetail = coin
+                } label: {
                     CoinRowView(
                         coin: coin,
                         showHoldingColumn: false,

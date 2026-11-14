@@ -11,6 +11,7 @@ struct WatchlistView: View {
     @EnvironmentObject private var vm: MarketViewModel
     @State private var searchText: String = ""
     @State private var showSearchBar: Bool = false
+    @State private var selectedCoinForDetail: CoinModel? = nil
     
     private var displayedWatchlist: [CoinModel] {
         if searchText.isEmpty {
@@ -74,8 +75,10 @@ struct WatchlistView: View {
                     }
                 }
             }
-            .navigationDestination(for: CoinModel.self) { coin in
-                DetailLoadingView(coin: .constant(coin))
+            .fullScreenCover(item: $selectedCoinForDetail) { coin in
+                NavigationStack {
+                    DetailView(coin: coin)
+                }
             }
         }
     }
@@ -104,7 +107,9 @@ extension WatchlistView {
     private var coinsList: some View {
         LazyVStack(spacing: 8) {
             ForEach(displayedWatchlist) { coin in
-                NavigationLink(value: coin) {
+                Button {
+                    selectedCoinForDetail = coin
+                } label: {
                     CoinRowView(
                         coin: coin,
                         showHoldingColumn: false,
