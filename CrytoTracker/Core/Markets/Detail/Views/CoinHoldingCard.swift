@@ -9,7 +9,7 @@ import SwiftUI
 
 /// A dedicated card displaying the user's personal holding position for a specific coin in DetailView.
 struct CoinHoldingCard: View {
-    @EnvironmentObject private var homeVM: HomeViewModel
+    @EnvironmentObject private var homeVM: MarketViewModel
     let coin: CoinModel
     var onBuyTapped: (() -> Void)? = nil
     var onSellTapped: (() -> Void)? = nil

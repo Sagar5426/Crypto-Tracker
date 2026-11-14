@@ -9,7 +9,7 @@ import SwiftUI
 
 struct TransactionHistoryView: View {
     @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject private var vm: HomeViewModel
+    @EnvironmentObject private var vm: MarketViewModel
     
     @State private var selectedFilter: TransactionFilter = .all
     @State private var searchText: String = ""

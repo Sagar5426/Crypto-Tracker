@@ -9,7 +9,7 @@ import SwiftUI
 
 struct PortfolioView: View {
     @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject private var vm: HomeViewModel
+    @EnvironmentObject private var vm: MarketViewModel
     
     // Initializer context
     private let initialCoin: CoinModel?

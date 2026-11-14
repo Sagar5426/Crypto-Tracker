@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct MainTabView: View {
-    @EnvironmentObject private var vm: HomeViewModel
+    @EnvironmentObject private var vm: MarketViewModel
     @State private var selectedTab: AppTab = .markets
     
     enum AppTab: Int, CaseIterable, Identifiable {
@@ -22,7 +22,7 @@ struct MainTabView: View {
     
     var body: some View {
         TabView(selection: $selectedTab) {
-            HomeView()
+            MarketView()
                 .tabItem {
                     Label("Markets", systemImage: "chart.line.uptrend.xyaxis")
                 }

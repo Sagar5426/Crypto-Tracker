@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct WatchlistView: View {
-    @EnvironmentObject private var vm: HomeViewModel
+    @EnvironmentObject private var vm: MarketViewModel
     @State private var searchText: String = ""
     @State private var showSearchBar: Bool = false
     

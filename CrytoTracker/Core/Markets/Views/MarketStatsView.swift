@@ -7,8 +7,8 @@
 
 import SwiftUI
 
-struct HomeStatsView: View {
-    @EnvironmentObject var vm: HomeViewModel
+struct MarketStatsView: View {
+    @EnvironmentObject var vm: MarketViewModel
     @Binding var showPortfolio: Bool
     
     private var marketStats: [StatisticModel] {
@@ -44,6 +44,6 @@ struct HomeStatsView: View {
 }
 
 #Preview {
-    HomeStatsView(showPortfolio: .constant(false))
+    MarketStatsView(showPortfolio: .constant(false))
         .environmentObject(DeveloperPreview.instance.homeVM)
 }

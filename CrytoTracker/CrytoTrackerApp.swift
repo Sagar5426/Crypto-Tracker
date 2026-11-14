@@ -9,7 +9,7 @@ import SwiftUI
 
 @main
 struct CrytoTrackerApp: App {
-    @StateObject private var vm = HomeViewModel()
+    @StateObject private var vm = MarketViewModel()
     @State private var showLaunchView: Bool = true
     
     init() {

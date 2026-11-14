@@ -5,7 +5,7 @@ class DeveloperPreview {
     
     static let instance = DeveloperPreview()
     
-    let homeVM: HomeViewModel
+    let homeVM: MarketViewModel
     
     let stat1 = StatisticModel(title: "Market Cap", value: "$12.5Bn", percentageChange: 25.34)
     let stat2 = StatisticModel(title: "Total Volume", value: "$1.23Tr")
@@ -323,7 +323,7 @@ class DeveloperPreview {
         self.adaCoin = ada
         
         // Initialize sample homeVM with realistic portfolio data
-        let vm = HomeViewModel(isForPreview: true)
+        let vm = MarketViewModel(isForPreview: true)
         let samplePortfolio = [btc, eth, sol, ada]
         vm.allCoins = samplePortfolio
         vm.portfolioCoins = samplePortfolio

@@ -7,7 +7,7 @@
 import SwiftUI
 import Combine
 
-class HomeViewModel: ObservableObject {
+class MarketViewModel: ObservableObject {
     @Published var statistics: [StatisticModel] = []
     
     @Published var allCoins: [CoinModel] = []

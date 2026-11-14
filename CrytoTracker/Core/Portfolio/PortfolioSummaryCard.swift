@@ -9,7 +9,7 @@ import SwiftUI
 
 /// The main portfolio summary card displayed on the Portfolio tab screen.
 struct PortfolioSummaryCard: View {
-    @EnvironmentObject private var vm: HomeViewModel
+    @EnvironmentObject private var vm: MarketViewModel
     
     /// Callback when user taps Manage on overall portfolio
     var onManageTapped: (() -> Void)? = nil
@@ -445,6 +445,6 @@ extension PortfolioSummaryCard {
             .ignoresSafeArea()
         PortfolioSummaryCard(onAddTapped: {})
     }
-    .environmentObject(HomeViewModel(isForPreview: true))
+    .environmentObject(MarketViewModel(isForPreview: true))
     .preferredColorScheme(.dark)
 }

@@ -9,7 +9,7 @@ import SwiftUI
 
 struct CashWalletView: View {
     @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject private var vm: HomeViewModel
+    @EnvironmentObject private var vm: MarketViewModel
     
     @State private var selectedMode: WalletAction = .deposit
     @State private var amountText: String = ""

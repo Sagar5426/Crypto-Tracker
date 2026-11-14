@@ -21,7 +21,7 @@ struct DetailLoadingView: View {
 }
 
 struct DetailView: View {
-    @EnvironmentObject private var homeVM: HomeViewModel
+    @EnvironmentObject private var homeVM: MarketViewModel
     @StateObject var vm: DetailViewModel
     @State private var showFullDescription: Bool = false
     @State private var showPortfolioSheet: Bool = false

@@ -7,9 +7,9 @@
 
 import SwiftUI
 
-struct HomeView: View {
+struct MarketView: View {
     
-    @EnvironmentObject private var vm: HomeViewModel
+    @EnvironmentObject private var vm: MarketViewModel
     @State private var showSearchBar: Bool = false
     
     var body: some View {
@@ -27,7 +27,7 @@ struct HomeView: View {
                         }
                         
                         // Global Market Overview Card
-                        HomeStatsView(showPortfolio: .constant(false))
+                        MarketStatsView(showPortfolio: .constant(false))
                             .padding(.top, 4)
                         
                         // Category Pills (All, Gainers, Losers, Top 10)
@@ -81,12 +81,12 @@ struct HomeView: View {
 }
 
 // MARK: - Subviews & Extensions
-extension HomeView {
+extension MarketView {
     
     private var categoryPillsBar: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
-                ForEach(HomeViewModel.MarketCategory.allCases) { category in
+                ForEach(MarketViewModel.MarketCategory.allCases) { category in
                     let isSelected = vm.marketCategory == category
                     Button {
                         withAnimation(.easeInOut(duration: 0.2)) {
@@ -295,6 +295,6 @@ extension HomeView {
 }
 
 #Preview {
-    HomeView()
+    MarketView()
         .environmentObject(DeveloperPreview.instance.homeVM)
 }

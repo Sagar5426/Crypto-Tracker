@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct PortfolioScreen: View {
-    @EnvironmentObject private var vm: HomeViewModel
+    @EnvironmentObject private var vm: MarketViewModel
     @State private var showManageSheet = false
     @State private var selectedCoinToEdit: CoinModel? = nil
     @State private var coinToDelete: CoinModel? = nil
