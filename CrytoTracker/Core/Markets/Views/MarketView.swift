@@ -149,6 +149,7 @@ extension MarketView {
                 showSearchBar: $showSearchBar,
                 searchText: $vm.searchText,
                 isLoading: vm.isLoading,
+                showLiveBadge: true,
                 onRefresh: {
                     vm.reloadData()
                 }

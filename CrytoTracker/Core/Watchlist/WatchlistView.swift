@@ -33,16 +33,25 @@ struct WatchlistView: View {
                 
                 ScrollView {
                     VStack(spacing: 16) {
-                        if !vm.watchlistCoins.isEmpty {
-                            if showSearchBar {
-                                SearchBarView(searchText: $searchText)
-                                    .transition(.move(edge: .top).combined(with: .opacity))
+                        HeaderView(
+                            title: "Watchlist",
+                            showSearchBar: $showSearchBar,
+                            searchText: $searchText,
+                            isLoading: vm.isLoading,
+                            onRefresh: {
+                                vm.reloadData()
                             }
-                            
+                        )
+                        
+                        if !vm.watchlistCoins.isEmpty {
                             watchlistHeader
                                 .padding(.top, 4)
                             
-                            coinsList
+                            if displayedWatchlist.isEmpty && !searchText.isEmpty {
+                                noResultsView
+                            } else {
+                                coinsList
+                            }
                         } else {
                             emptyWatchlistView
                                 .padding(.top, 40)
@@ -54,27 +63,7 @@ struct WatchlistView: View {
                     vm.reloadData()
                 }
             }
-            .navigationTitle("Watchlist")
-            .navigationBarTitleDisplayMode(.large)
-            .toolbar {
-                if !vm.watchlistCoins.isEmpty {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button {
-                            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                                showSearchBar.toggle()
-                                if !showSearchBar {
-                                    searchText = ""
-                                    UIApplication.shared.endEditing()
-                                }
-                            }
-                        } label: {
-                            Image(systemName: showSearchBar ? "xmark" : "magnifyingglass")
-                                .font(.headline)
-                                .foregroundStyle(Color.theme.accent)
-                        }
-                    }
-                }
-            }
+            .toolbar(.hidden, for: .navigationBar)
             .fullScreenCover(item: $selectedCoinForDetail) { coin in
                 NavigationStack {
                     CoinDetailView(coin: coin)
@@ -145,6 +134,27 @@ extension WatchlistView {
                 }
             }
         }
+    }
+    
+    private var noResultsView: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 36))
+                .foregroundStyle(Color.theme.secondaryText)
+                .padding(.top, 24)
+            
+            Text("No results for \"\(searchText)\"")
+                .font(.headline)
+                .foregroundStyle(Color.theme.accent)
+            
+            Text("Check the spelling or try searching for another cryptocurrency.")
+                .font(.caption)
+                .foregroundStyle(Color.theme.secondaryText)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 32)
+        }
+        .frame(maxWidth: .infinity)
+        .padding()
     }
     
     private var emptyWatchlistView: some View {

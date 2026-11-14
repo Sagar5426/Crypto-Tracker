@@ -171,7 +171,7 @@ extension CoinHoldingCard {
                 metricBox(
                     title: "Invested",
                     value: coin.costBasis.asCurrencyWith2Decimals(),
-                    subtitle: "Cost basis",
+                    subtitle: nil,
                     systemImage: "arrow.down.circle.fill",
                     tintColor: Color.blue
                 )
@@ -235,7 +235,7 @@ extension CoinHoldingCard {
     private func metricBox(
         title: String,
         value: String,
-        subtitle: String,
+        subtitle: String?,
         systemImage: String,
         tintColor: Color
     ) -> some View {
@@ -256,11 +256,13 @@ extension CoinHoldingCard {
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
             
-            Text(subtitle)
-                .font(.system(size: 9, weight: .medium))
-                .foregroundStyle(title == "Total P&L" ? tintColor : Color.theme.secondaryText)
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
+            if let subtitle {
+                Text(subtitle)
+                    .font(.system(size: 9, weight: .medium))
+                    .foregroundStyle(title == "Total P&L" ? tintColor : Color.theme.secondaryText)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 10)

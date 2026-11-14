@@ -130,7 +130,7 @@ extension PortfolioSummaryCard {
             primaryMetricCard(
                 title: "Invested",
                 value: vm.portfolioTotalInvested.asCurrencyWith2Decimals(),
-                subtitle: "Cost Basis",
+                subtitle: nil,
                 systemImage: "arrow.down.left.circle.fill",
                 tintColor: .blue,
                 isHighlighted: false
@@ -140,7 +140,7 @@ extension PortfolioSummaryCard {
             primaryMetricCard(
                 title: "Current",
                 value: vm.portfolioTotalValue.asCurrencyWith2Decimals(),
-                subtitle: "Market Value",
+                subtitle: nil,
                 systemImage: "chart.line.uptrend.xyaxis.circle.fill",
                 tintColor: .purple,
                 isHighlighted: true
@@ -151,7 +151,7 @@ extension PortfolioSummaryCard {
     private func primaryMetricCard(
         title: String,
         value: String,
-        subtitle: String,
+        subtitle: String?,
         systemImage: String,
         tintColor: Color,
         isHighlighted: Bool
@@ -176,10 +176,12 @@ extension PortfolioSummaryCard {
                 .lineLimit(1)
                 .minimumScaleFactor(0.65)
             
-            Text(subtitle)
-                .font(.caption2)
-                .fontWeight(.medium)
-                .foregroundStyle(Color.theme.secondaryText.opacity(0.8))
+            if let subtitle {
+                Text(subtitle)
+                    .font(.caption2)
+                    .fontWeight(.medium)
+                    .foregroundStyle(Color.theme.secondaryText.opacity(0.8))
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(12)
@@ -187,15 +189,15 @@ extension PortfolioSummaryCard {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .fill(
                     isHighlighted
-                        ? tintColor.opacity(0.07)
-                        : Color.theme.secondaryText.opacity(0.06)
+                    ? tintColor.opacity(0.07)
+                    : Color.theme.secondaryText.opacity(0.06)
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: 14, style: .continuous)
                         .stroke(
                             isHighlighted
-                                ? tintColor.opacity(0.18)
-                                : Color.theme.secondaryText.opacity(0.08),
+                            ? tintColor.opacity(0.18)
+                            : Color.theme.secondaryText.opacity(0.08),
                             lineWidth: 1
                         )
                 )
@@ -208,7 +210,7 @@ extension PortfolioSummaryCard {
         let dayColor = is24HProfitable ? Color.theme.green : Color.theme.red
         
         return HStack(spacing: 0) {
-            // Total P&L Column
+            // Total P&L Column (Left Half)
             HStack(spacing: 8) {
                 ZStack {
                     Circle()
@@ -225,51 +227,48 @@ extension PortfolioSummaryCard {
                         .font(.system(size: 10, weight: .semibold))
                         .foregroundStyle(Color.theme.secondaryText)
                     
-                    HStack(spacing: 4) {
-                        Text((isProfitable ? "+" : "") + vm.portfolioTotalProfitLoss.asCurrencyWith2Decimals())
-                            .font(.system(size: 13, weight: .bold, design: .rounded))
-                            .foregroundStyle(totalColor)
-                        
-                        Text("(\((isProfitable ? "+" : "") + vm.portfolioTotalProfitLossPercentage.asPercentString()))")
-                            .font(.system(size: 11, weight: .semibold, design: .rounded))
-                            .foregroundStyle(totalColor.opacity(0.9))
-                    }
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.75)
+                    Text((isProfitable ? "+" : "") + vm.portfolioTotalProfitLoss.asCurrencyWith2Decimals())
+                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                        .foregroundStyle(totalColor)
+                    
+                    Text("(\((isProfitable ? "+" : "") + vm.portfolioTotalProfitLossPercentage.asPercentString()))")
+                        .font(.system(size: 11, weight: .semibold, design: .rounded))
+                        .foregroundStyle(totalColor.opacity(0.9))
                 }
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             
-            if !vm.portfolioCoins.isEmpty {
-                Rectangle()
-                    .fill(Color.theme.secondaryText.opacity(0.15))
-                    .frame(width: 1, height: 28)
-                    .padding(.horizontal, 10)
-                
-                // 24h Return Column
-                VStack(alignment: .trailing, spacing: 2) {
-                    HStack(spacing: 3) {
-                        Image(systemName: "clock.arrow.circlepath")
-                            .font(.system(size: 9))
-                        Text("24h Change")
-                            .font(.system(size: 10, weight: .semibold))
-                    }
-                    .foregroundStyle(Color.theme.secondaryText)
-                    
-                    HStack(spacing: 4) {
-                        Text((is24HProfitable ? "+" : "") + vm.portfolioProfit24H.asCurrencyWith2Decimals())
-                            .font(.system(size: 13, weight: .bold, design: .rounded))
-                            .foregroundStyle(dayColor)
-                        
-                        Text("(\(vm.portfolioProfitPercentage24H.asPercentString()))")
-                            .font(.system(size: 11, weight: .semibold, design: .rounded))
-                            .foregroundStyle(dayColor.opacity(0.9))
-                    }
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.75)
+            // Center Vertical Divider
+            Rectangle()
+                .fill(Color.theme.secondaryText.opacity(0.15))
+                .frame(width: 1, height: 34)
+                .padding(.horizontal, 12)
+            
+            // 24h Return Column (Right Half, Flush Trailing)
+            VStack(alignment: .trailing, spacing: 2) {
+                HStack(spacing: 3) {
+                    Image(systemName: "clock.arrow.circlepath")
+                        .font(.system(size: 9))
+                    Text("24h Change")
+                        .font(.system(size: 10, weight: .semibold))
                 }
+                .foregroundStyle(Color.theme.secondaryText)
+                
+                Text((is24HProfitable ? "+" : "") + vm.portfolioProfit24H.asCurrencyWith2Decimals())
+                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                    .foregroundStyle(dayColor)
+                
+                Text("(\((is24HProfitable ? "+" : "") + vm.portfolioProfitPercentage24H.asPercentString()))")
+                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                    .foregroundStyle(dayColor.opacity(0.9))
             }
+            .lineLimit(1)
+            .minimumScaleFactor(0.75)
+            .frame(maxWidth: .infinity, alignment: .trailing)
         }
+        .frame(maxWidth: .infinity)
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
         .background(
@@ -313,8 +312,8 @@ extension PortfolioSummaryCard {
                     ForEach(vm.portfolioCoins.indices, id: \.self) { index in
                         let coin = vm.portfolioCoins[index]
                         let ratio = vm.portfolioTotalValue > 0
-                            ? max(0, min(1, coin.currentHoldingsValue / vm.portfolioTotalValue))
-                            : 0
+                        ? max(0, min(1, coin.currentHoldingsValue / vm.portfolioTotalValue))
+                        : 0
                         let segmentWidth = max(CGFloat(ratio) * availableWidth, 4)
                         let color = allocationColors[index % allocationColors.count]
                         

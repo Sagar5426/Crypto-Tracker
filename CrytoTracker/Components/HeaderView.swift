@@ -25,7 +25,9 @@ struct HeaderView: View {
     @Binding var showSearchBar: Bool
     @Binding var searchText: String
     var isLoading: Bool = false
+    var showLiveBadge: Bool = false
     var onRefresh: (() -> Void)? = nil
+    var onAdd: (() -> Void)? = nil
     
     @State private var isSpinning: Bool = false
     
@@ -39,25 +41,45 @@ struct HeaderView: View {
                         .font(.system(size: 32, weight: .bold, design: .rounded))
                         .foregroundStyle(Color.theme.accent)
                     
-                    // Live Indicator Badge
-                    HStack(spacing: 4) {
-                        Circle()
-                            .fill(Color.theme.green)
-                            .frame(width: 6, height: 6)
-                        Text("LIVE")
-                            .font(.system(size: 10, weight: .bold))
-                            .foregroundStyle(Color.theme.green)
+                    // Live Indicator Badge (only shown when enabled, e.g. in Markets tab)
+                    if showLiveBadge {
+                        HStack(spacing: 4) {
+                            Circle()
+                                .fill(Color.theme.green)
+                                .frame(width: 6, height: 6)
+                            Text("LIVE")
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundStyle(Color.theme.green)
+                        }
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 3)
+                        .background(Color.theme.green.opacity(0.12))
+                        .clipShape(Capsule())
                     }
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 3)
-                    .background(Color.theme.green.opacity(0.12))
-                    .clipShape(Capsule())
                 }
                 
                 Spacer()
                 
                 // Trailing Action Buttons
                 HStack(spacing: 12) {
+                    // Optional Add Button (e.g. for Portfolio)
+                    if let onAdd = onAdd {
+                        Button {
+                            HapticManager.notification(type: .success)
+                            onAdd()
+                        } label: {
+                            Image(systemName: "plus")
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundStyle(Color.theme.accent)
+                                .frame(width: 38, height: 38)
+                                .background(
+                                    Circle()
+                                        .fill(Color.theme.secondaryText.opacity(0.1))
+                                )
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    
                     // Refresh Button
                     Button {
                         HapticManager.notification(type: .success)
@@ -124,7 +146,8 @@ struct HeaderView: View {
             title: "Markets",
             showSearchBar: .constant(false),
             searchText: .constant(""),
-            isLoading: false
+            isLoading: false,
+            showLiveBadge: true
         )
     }
 }
