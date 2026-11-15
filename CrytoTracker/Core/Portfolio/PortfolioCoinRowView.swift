@@ -28,8 +28,12 @@ struct PortfolioCoinRowView: View {
         coin.costBasis.asCompactCurrency(fallback: coin.costBasis.asCurrencyWith2Decimals())
     }
     
-    private var presentValueFormatted: String {
-        coin.currentHoldingsValue.asCompactCurrency(fallback: coin.currentHoldingsValue.asCurrencyWith2Decimals())
+    private var netProfitLossFormatted: String {
+        let pl = coin.profitLoss
+        let prefix = isProfitable ? "+" : ""
+        let formatted = pl.asCompactCurrency(fallback: pl.asCurrencyWith2Decimals())
+            .replacingOccurrences(of: "$", with: "")
+        return "\(prefix)\(formatted)"
     }
     
     private var isProfitable: Bool {
@@ -105,8 +109,6 @@ struct PortfolioCoinRowView: View {
             VStack(alignment: .trailing, spacing: 5) {
                 // 1. Overall P&L Percentage Pill
                 HStack(spacing: 3) {
-                    Image(systemName: isProfitable ? "arrow.up.right" : "arrow.down.right")
-                        .font(.system(size: 8, weight: .bold))
                     
                     Text(profitLossPercentageFormatted)
                         .font(.system(size: 10.5, weight: .bold, design: .rounded))
@@ -120,11 +122,11 @@ struct PortfolioCoinRowView: View {
                         .fill((isProfitable ? Color.theme.green : Color.theme.red).opacity(0.12))
                 )
                 
-                // 2. Present Holdings Value
-                Text(presentValueFormatted)
+                // 2. Actual Net Profit or Loss
+                Text(netProfitLossFormatted)
                     .font(.system(size: 15, weight: .bold, design: .rounded))
                     .monospacedDigit()
-                    .foregroundStyle(Color.theme.accent)
+                    .foregroundStyle(isProfitable ? Color.theme.green : Color.theme.red)
                     .lineLimit(1)
                     .minimumScaleFactor(0.75)
                 

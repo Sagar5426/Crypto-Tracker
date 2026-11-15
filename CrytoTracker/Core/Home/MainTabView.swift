@@ -32,14 +32,12 @@ struct MainTabView: View {
                 .tabItem {
                     Label("Portfolio", systemImage: "briefcase.fill")
                 }
-                .badge(vm.portfolioCoins.isEmpty ? 0 : vm.portfolioCoins.count)
                 .tag(AppTab.portfolio)
             
             WatchlistView()
                 .tabItem {
                     Label("Watchlist", systemImage: "star.fill")
                 }
-                .badge(vm.watchlistCoins.isEmpty ? 0 : vm.watchlistCoins.count)
                 .tag(AppTab.watchlist)
             
             SettingsView(showsDismissButton: false)

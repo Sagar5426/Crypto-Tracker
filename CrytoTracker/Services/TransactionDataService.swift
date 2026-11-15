@@ -44,7 +44,7 @@ class TransactionDataService {
     }
     
     // MARK: - Public
-    func addTransaction(coin: CoinModel, type: TransactionType, amount: Double, pricePerCoin: Double) {
+    func addTransaction(coin: CoinModel, type: TransactionType, amount: Double, pricePerCoin: Double, timestamp: Date = Date()) {
         let entity = TransactionEntity(context: container.viewContext)
         entity.id = UUID().uuidString
         entity.coinID = coin.id
@@ -54,9 +54,20 @@ class TransactionDataService {
         entity.amount = amount
         entity.pricePerCoin = pricePerCoin
         entity.totalValue = amount * pricePerCoin
-        entity.timestamp = Date()
+        entity.timestamp = timestamp
         
         applyChanges()
+    }
+    
+    func updateTransaction(id: String, type: TransactionType, amount: Double, pricePerCoin: Double, timestamp: Date) {
+        if let entity = savedTransactions.first(where: { $0.id == id }) {
+            entity.transactionType = type.rawValue
+            entity.amount = amount
+            entity.pricePerCoin = pricePerCoin
+            entity.totalValue = amount * pricePerCoin
+            entity.timestamp = timestamp
+            applyChanges()
+        }
     }
     
     func addCustomTransaction(coinID: String, coinName: String, coinSymbol: String, type: TransactionType, amount: Double, pricePerCoin: Double, totalValue: Double) {

@@ -55,9 +55,21 @@ class MarketViewModel: ObservableObject {
     }
     
     var topMovers: [CoinModel] {
+        topGainers
+    }
+    
+    var topGainers: [CoinModel] {
         allCoins
             .filter { ($0.priceChangePercentage24H ?? 0) > 0 }
             .sorted(by: { ($0.priceChangePercentage24H ?? 0) > ($1.priceChangePercentage24H ?? 0) })
+            .prefix(6)
+            .map { $0 }
+    }
+    
+    var topLosers: [CoinModel] {
+        allCoins
+            .filter { ($0.priceChangePercentage24H ?? 0) < 0 }
+            .sorted(by: { ($0.priceChangePercentage24H ?? 0) < ($1.priceChangePercentage24H ?? 0) })
             .prefix(6)
             .map { $0 }
     }
@@ -253,6 +265,67 @@ class MarketViewModel: ObservableObject {
     
     func deleteTransaction(_ entity: TransactionEntity) {
         transactionDataService.deleteTransaction(entity: entity)
+    }
+    
+    func updateTransactionAndRecalculate(
+        id: String,
+        coin: CoinModel,
+        type: TransactionType,
+        amount: Double,
+        pricePerCoin: Double,
+        timestamp: Date
+    ) {
+        if transactions.contains(where: { $0.id == id }) {
+            transactionDataService.updateTransaction(
+                id: id,
+                type: type,
+                amount: amount,
+                pricePerCoin: pricePerCoin,
+                timestamp: timestamp
+            )
+        } else {
+            transactionDataService.addTransaction(
+                coin: coin,
+                type: type,
+                amount: amount,
+                pricePerCoin: pricePerCoin,
+                timestamp: timestamp
+            )
+        }
+        
+        recalculatePortfolio(for: coin)
+    }
+    
+    func recalculatePortfolio(for coin: CoinModel) {
+        let coinTxs = transactionDataService.savedTransactions.filter { $0.coinID == coin.id }
+        if !coinTxs.isEmpty {
+            var totalQty = 0.0
+            var totalCost = 0.0
+            let sortedTxs = coinTxs.sorted { ($0.timestamp ?? Date()) < ($1.timestamp ?? Date()) }
+            for tx in sortedTxs {
+                let txType = (tx.transactionType ?? "").uppercased()
+                if txType == "BUY" {
+                    totalQty += tx.amount
+                    totalCost += tx.totalValue
+                } else if txType == "SELL" {
+                    let fraction = totalQty > 0 ? min(1.0, tx.amount / totalQty) : 1.0
+                    totalCost -= totalCost * fraction
+                    totalQty = max(0, totalQty - tx.amount)
+                }
+            }
+            
+            let avgPrice = totalQty > 0 ? (totalCost / totalQty) : coin.currentPrice
+            portfolioDataService.updatePortfolio(
+                coin: coin,
+                amount: totalQty,
+                investedAmount: totalCost,
+                averageBuyPrice: avgPrice
+            )
+            
+            if let idx = portfolioCoins.firstIndex(where: { $0.id == coin.id }) {
+                portfolioCoins[idx] = coin.updateHoldings(amount: totalQty, investedAmount: totalCost, averageBuyPrice: avgPrice)
+            }
+        }
     }
     
     func clearAllTransactions() {

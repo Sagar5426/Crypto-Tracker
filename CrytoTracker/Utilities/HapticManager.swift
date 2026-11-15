@@ -19,5 +19,11 @@ class HapticManager {
         generator.prepare()
         generator.impactOccurred()
     }
+    
+    static func selection() {
+        let generator = UISelectionFeedbackGenerator()
+        generator.prepare()
+        generator.selectionChanged()
+    }
 }
 

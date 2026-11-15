@@ -333,6 +333,8 @@ extension PortfolioSummaryCard {
                         let coin = vm.portfolioCoins[index]
                         let share = vm.portfolioShare(for: coin)
                         let color = allocationColors[index % allocationColors.count]
+                        let isFirst = index == 0
+                        let isLast = index == vm.portfolioCoins.count - 1
                         
                         HStack(spacing: 5) {
                             Circle()
@@ -359,10 +361,13 @@ extension PortfolioSummaryCard {
                             Capsule()
                                 .fill(Color.theme.secondaryText.opacity(0.06))
                         )
+                        .padding(.leading, isFirst ? 16 : 0)
+                        .padding(.trailing, isLast ? 16 : 0)
                     }
                 }
                 .padding(.vertical, 2)
             }
+            .padding(.horizontal, -16)
         }
     }
 }

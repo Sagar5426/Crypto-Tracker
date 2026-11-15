@@ -66,6 +66,7 @@
 		459ED38A30A9034100116335 /* SwiftfulRouting in Frameworks */ = {isa = PBXBuildFile; productRef = 459ED38930A9034100116335 /* SwiftfulRouting */; };
 		459ED38C30A9FF9600116335 /* CoinInvestmentCardSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 459ED38B30A9FF9600116335 /* CoinInvestmentCardSection.swift */; };
 		459ED38E30AA041B00116335 /* CoinInvestmentBreakdownView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 459ED38D30AA041B00116335 /* CoinInvestmentBreakdownView.swift */; };
+		459ED39030AA3F7F00116335 /* EditTransactionSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 459ED38F30AA3F7F00116335 /* EditTransactionSheet.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -126,7 +127,8 @@
 		459ED38130A8C13900116335 /* PortfolioCoinRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PortfolioCoinRowView.swift; sourceTree = "<group>"; };
 		459ED38330A8F63600116335 /* HeaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeaderView.swift; sourceTree = "<group>"; };
 		459ED38B30A9FF9600116335 /* CoinInvestmentCardSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoinInvestmentCardSection.swift; sourceTree = "<group>"; };
-		459ED38D30AA041B00116335 /* CoinInvestmentBreakdownView.swift */ = {isa = PBXFileReference; path = CoinInvestmentBreakdownView.swift; sourceTree = "<group>"; };
+		459ED38D30AA041B00116335 /* CoinInvestmentBreakdownView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoinInvestmentBreakdownView.swift; sourceTree = "<group>"; };
+		459ED38F30AA3F7F00116335 /* EditTransactionSheet.swift */ = {isa = PBXFileReference; path = EditTransactionSheet.swift; sourceTree = "<group>"; };
 		45B438442E894416005778D8 /* CrytoTracker.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CrytoTracker.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -200,6 +202,7 @@
 				459ED30D30A8B9E900116335 /* CoinDetailView.swift */,
 				459ED38B30A9FF9600116335 /* CoinInvestmentCardSection.swift */,
 				459ED38D30AA041B00116335 /* CoinInvestmentBreakdownView.swift */,
+				459ED38F30AA3F7F00116335 /* EditTransactionSheet.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -505,6 +508,7 @@
 				459ED36E30A8B9E900116335 /* PortfolioContainer.xcdatamodeld in Sources */,
 				459ED36F30A8B9E900116335 /* StatisticModel.swift in Sources */,
 				459ED37030A8B9E900116335 /* CoinDataService.swift in Sources */,
+				459ED39030AA3F7F00116335 /* EditTransactionSheet.swift in Sources */,
 				459ED37130A8B9E900116335 /* CoinDetailDataService.swift in Sources */,
 				459ED37230A8B9E900116335 /* CoinImageService.swift in Sources */,
 				459ED37330A8B9E900116335 /* MarketChartDataService.swift in Sources */,

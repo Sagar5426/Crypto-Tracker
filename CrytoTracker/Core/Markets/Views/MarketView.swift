@@ -194,10 +194,21 @@ extension MarketView {
                     
                     // Sticky Section: Filter chips stick at the top, below views scroll strictly underneath
                     Section {
-                        // Top Movers strip (when in 'All' and not searching)
-                        if vm.searchText.isEmpty && vm.marketCategory == .all && !vm.topMovers.isEmpty {
-                            topMoversSection
-                                .zIndex(0)
+                        // Top Gainers & Top Losers strips
+                        if vm.searchText.isEmpty {
+                            // Top Gainers: kept intact in 'All' or when 'Gainers' chip is selected
+                            if (vm.marketCategory == .all || vm.marketCategory == .gainers) && !vm.topMovers.isEmpty {
+                                topMoversSection
+                                    .zIndex(0)
+                                    .transition(.opacity.combined(with: .scale(scale: 0.98, anchor: .top)))
+                            }
+                            
+                            // Top Losers: kept intact in 'All' or when 'Losers' chip is selected
+                            if (vm.marketCategory == .all || vm.marketCategory == .losers) && !vm.topLosers.isEmpty {
+                                topLosersSection
+                                    .zIndex(0)
+                                    .transition(.opacity.combined(with: .scale(scale: 0.98, anchor: .top)))
+                            }
                         }
                         
                         // Sticky / Flowing Column Titles
@@ -371,6 +382,84 @@ extension MarketView {
             .padding(.horizontal, 5)
             .padding(.vertical, 2)
             .background(Color.theme.green.opacity(0.12))
+            .clipShape(Capsule())
+        }
+        .padding(8)
+        .frame(width: 100)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.theme.background)
+                .shadow(color: Color.theme.accent.opacity(0.06), radius: 5, x: 0, y: 2)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.theme.secondaryText.opacity(0.12), lineWidth: 1)
+                )
+        )
+    }
+    
+    private var topLosersSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 4) {
+                Image(systemName: "chart.line.downtrend.xyaxis")
+                    .foregroundStyle(Color.theme.red)
+                    .font(.caption)
+                Text("Top Losers 24h")
+                    .font(.caption)
+                    .fontWeight(.bold)
+                    .foregroundStyle(Color.theme.secondaryText)
+            }
+            .padding(.horizontal)
+            
+            ScrollView(.horizontal, showsIndicators: false) {
+                LazyHStack(spacing: 10) {
+                    ForEach(vm.topLosers) { coin in
+                        Button {
+                            selectedCoinForDetail = coin
+                        } label: {
+                            topLoserCard(coin: coin)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.horizontal)
+                .padding(.vertical, 2)
+            }
+        }
+    }
+    
+    private func topLoserCard(coin: CoinModel) -> some View {
+        VStack(alignment: .leading, spacing: 5) {
+            HStack {
+                CoinImageView(coin: coin)
+                    .frame(width: 22, height: 22)
+                Spacer()
+                Text("#\(coin.rank)")
+                    .font(.system(size: 9, weight: .bold, design: .monospaced))
+                    .foregroundStyle(Color.theme.secondaryText)
+            }
+            
+            Text(coin.symbol.uppercased())
+                .font(.system(size: 13, weight: .bold))
+                .foregroundStyle(Color.theme.accent)
+                .lineLimit(1)
+            
+            Text(coin.currentPrice.asFormattedPrice())
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(Color.theme.accent)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+            
+            HStack(spacing: 2) {
+                Image(systemName: "arrow.down.right")
+                    .font(.system(size: 7, weight: .bold))
+                Text(coin.priceChangePercentage24H?.asPercentString() ?? "-0.0%")
+                    .font(.system(size: 10, weight: .bold))
+                    .lineLimit(1)
+            }
+            .foregroundStyle(Color.theme.red)
+            .padding(.horizontal, 5)
+            .padding(.vertical, 2)
+            .background(Color.theme.red.opacity(0.12))
             .clipShape(Capsule())
         }
         .padding(8)

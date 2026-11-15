@@ -14,7 +14,6 @@ struct PortfolioScreen: View {
     @State private var selectedCoinToEdit: CoinModel? = nil
     @State private var coinToDelete: CoinModel? = nil
     @State private var showDeleteConfirmation = false
-    @State private var swipedCoinId: String? = nil
     @State private var selectedCoinForDetail: CoinModel? = nil
     @State private var showSearchBar: Bool = false
     @State private var searchText: String = ""
@@ -241,20 +240,38 @@ extension PortfolioScreen {
     private var holdingsList: some View {
         LazyVStack(spacing: 8) {
             ForEach(displayedPortfolioCoins) { coin in
-                PortfolioSwipeableRow(
-                    coin: coin,
-                    swipedCoinId: $swipedCoinId,
-                    onTap: {
-                        selectedCoinForDetail = coin
-                    },
-                    onEdit: {
+                Button {
+                    selectedCoinForDetail = coin
+                } label: {
+                    PortfolioCoinRowView(coin: coin)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(Color.theme.background)
+                                .shadow(color: Color.theme.accent.opacity(0.04), radius: 4, x: 0, y: 2)
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Color.theme.secondaryText.opacity(0.08), lineWidth: 1)
+                        )
+                }
+                .buttonStyle(.plain)
+                .padding(.horizontal)
+                .contextMenu {
+                    Button {
                         selectedCoinToEdit = coin
-                    },
-                    onRemove: {
+                    } label: {
+                        Label("Edit Holdings", systemImage: "pencil")
+                    }
+                    
+                    Button(role: .destructive) {
                         coinToDelete = coin
                         showDeleteConfirmation = true
+                    } label: {
+                        Label("Remove Holding", systemImage: "trash")
                     }
-                )
+                }
             }
         }
     }
@@ -325,210 +342,7 @@ extension PortfolioScreen {
     }
 }
 
-// MARK: - Swipeable Row Component
-private struct PortfolioSwipeableRow: View {
-    let coin: CoinModel
-    @Binding var swipedCoinId: String?
-    let onTap: () -> Void
-    let onEdit: () -> Void
-    let onRemove: () -> Void
-    
-    @State private var dragOffset: CGFloat = 0
-    private let actionButtonsWidth: CGFloat = 126
-    
-    private var isSwipedOpen: Bool {
-        swipedCoinId == coin.id
-    }
-    
-    private var currentOffset: CGFloat {
-        let base: CGFloat = isSwipedOpen ? -actionButtonsWidth : 0
-        return base + dragOffset
-    }
-    
-    var body: some View {
-        ZStack(alignment: .trailing) {
-            // Action Buttons Revealed Behind Card
-            actionButtons
-            
-            // Foreground Interactive Card
-            cardContent
-                .offset(x: currentOffset)
-                .simultaneousGesture(swipeGesture)
-        }
-        .padding(.horizontal)
-    }
-    
-    // MARK: - Action Buttons
-    private var actionButtons: some View {
-        HStack(spacing: 6) {
-            // Edit Button
-            Button {
-                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                    swipedCoinId = nil
-                }
-                HapticManager.impact(style: .light)
-                onEdit()
-            } label: {
-                VStack(spacing: 3) {
-                    Image(systemName: "pencil")
-                        .font(.system(size: 15, weight: .bold))
-                    Text("Edit")
-                        .font(.system(size: 10, weight: .bold, design: .rounded))
-                }
-                .foregroundStyle(.white)
-                .frame(width: 58)
-                .frame(maxHeight: .infinity)
-                .background(Color.blue)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-            }
-            .buttonStyle(.plain)
-            
-            // Remove Button
-            Button(role: .destructive) {
-                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                    swipedCoinId = nil
-                }
-                HapticManager.impact(style: .medium)
-                onRemove()
-            } label: {
-                VStack(spacing: 3) {
-                    Image(systemName: "trash")
-                        .font(.system(size: 15, weight: .bold))
-                    Text("Remove")
-                        .font(.system(size: 10, weight: .bold, design: .rounded))
-                }
-                .foregroundStyle(.white)
-                .frame(width: 58)
-                .frame(maxHeight: .infinity)
-                .background(Color.theme.red)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-            }
-            .buttonStyle(.plain)
-        }
-        .padding(.vertical, 1)
-    }
-    
-    // MARK: - Card Content
-    private var cardContent: some View {
-        ZStack {
-            Button {
-                if !isSwipedOpen {
-                    onTap()
-                }
-            } label: {
-                PortfolioCoinRowView(coin: coin)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-            }
-            .buttonStyle(.plain)
-            .disabled(isSwipedOpen)
-            
-            // Tap outside to close when swiped open
-            if isSwipedOpen {
-                Color.clear
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                            swipedCoinId = nil
-                        }
-                    }
-            }
-        }
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color.theme.background)
-                .shadow(color: Color.theme.accent.opacity(0.04), radius: 4, x: 0, y: 2)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.theme.secondaryText.opacity(0.08), lineWidth: 1)
-        )
-        .contentShape(Rectangle())
-        .contextMenu {
-            Button {
-                onEdit()
-            } label: {
-                Label("Edit Holdings", systemImage: "pencil")
-            }
-            
-            Button(role: .destructive) {
-                onRemove()
-            } label: {
-                Label("Remove Holding", systemImage: "trash")
-            }
-        }
-    }
-    
-    // MARK: - Swipe Gesture
-    private var swipeGesture: some Gesture {
-        DragGesture(minimumDistance: 15, coordinateSpace: .local)
-            .onChanged { value in
-                // Only respond if drag is primarily horizontal
-                if abs(value.translation.width) > abs(value.translation.height) {
-                    let base: CGFloat = isSwipedOpen ? -actionButtonsWidth : 0
-                    let proposed = base + value.translation.width
-                    
-                    if proposed <= 0 {
-                        // Dragging left: clamp with rubber-banding past action buttons
-                        let overdrag = max(-actionButtonsWidth - proposed, 0)
-                        dragOffset = (proposed - base) + (overdrag * 0.2)
-                    } else {
-                        // Dragging right: slight elastic resistance
-                        dragOffset = min(value.translation.width * 0.2, 10)
-                    }
-                }
-            }
-            .onEnded { value in
-                let horizontalDrag = value.translation.width
-                let velocity = value.predictedEndTranslation.width
-                
-                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                    if isSwipedOpen {
-                        // If already open, swiping right or fast flick closes it
-                        if horizontalDrag > 25 || velocity > 60 {
-                            swipedCoinId = nil
-                        } else {
-                            swipedCoinId = coin.id
-                        }
-                    } else {
-                        // If closed, swiping left or fast flick opens it
-                        if horizontalDrag < -40 || velocity < -80 {
-                            swipedCoinId = coin.id
-                            HapticManager.impact(style: .light)
-                        } else {
-                            swipedCoinId = nil
-                        }
-                    }
-                    dragOffset = 0
-                }
-            }
-    }
-}
-
 #Preview("Portfolio Screen") {
     PortfolioScreen()
         .environmentObject(DeveloperPreview.instance.homeVM)
-}
-
-#Preview("Portfolio Swipeable Row") {
-    VStack(spacing: 16) {
-        PortfolioSwipeableRow(
-            coin: DeveloperPreview.instance.coin,
-            swipedCoinId: .constant(nil),
-            onTap: {},
-            onEdit: {},
-            onRemove: {}
-        )
-        
-        PortfolioSwipeableRow(
-            coin: DeveloperPreview.instance.adaCoin,
-            swipedCoinId: .constant(DeveloperPreview.instance.adaCoin.id),
-            onTap: {},
-            onEdit: {},
-            onRemove: {}
-        )
-    }
-    .padding(.vertical)
-    .background(Color.theme.background)
-    .preferredColorScheme(.dark)
 }
