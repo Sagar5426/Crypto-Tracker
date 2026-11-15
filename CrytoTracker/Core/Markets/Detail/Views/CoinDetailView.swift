@@ -48,18 +48,9 @@ struct CoinDetailView: View {
                 
                 // Personal Portfolio Holdings (with real data)
                 if userHasHoldings, let holding = userHoldingCoin {
-                    CoinHoldingCard(
+                    CoinInvestmentCardSection(
                         coin: holding,
-                        onBuyTapped: {
-                            tradeTypeToOpen = .buy
-                            showPortfolioSheet.toggle()
-                            HapticManager.notification(type: .success)
-                        },
-                        onSellTapped: {
-                            tradeTypeToOpen = .sell
-                            showPortfolioSheet.toggle()
-                            HapticManager.notification(type: .success)
-                        }
+                        onViewBreakdownTapped: { }
                     )
                 }
                 

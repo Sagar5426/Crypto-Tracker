@@ -101,7 +101,6 @@ extension WatchlistView {
                 } label: {
                     CoinRowView(
                         coin: coin,
-                        showHoldingColumn: false,
                         isFavorite: true,
                         onFavoriteTapped: {
                             withAnimation {

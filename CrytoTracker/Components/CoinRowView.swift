@@ -9,7 +9,6 @@ import SwiftUI
 
 struct CoinRowView: View {
     let coin: CoinModel
-    var showHoldingColumn: Bool = false
     var isFavorite: Bool = false
     var onFavoriteTapped: (() -> Void)? = nil
     
@@ -19,11 +18,7 @@ struct CoinRowView: View {
             
             Spacer(minLength: 6)
             
-            if showHoldingColumn {
-                centerColumn
-            } else {
-                miniSparkline
-            }
+            miniSparkline
             
             rightColumn
         }
@@ -184,34 +179,13 @@ extension CoinRowView {
         .padding(.horizontal, 4)
     }
     
-    private var centerColumn: some View {
-        VStack(alignment: .trailing, spacing: 3) {
-            Text(coin.currentHoldingsValue.asCurrencyWith2Decimals())
-                .font(.system(size: 14, weight: .bold, design: .rounded))
-                .monospacedDigit()
-                .foregroundStyle(Color.theme.accent)
-                .lineLimit(1)
-                .minimumScaleFactor(0.75)
-            
-            Text("\((coin.currentHoldings ?? 0).asNumberString()) \(coin.symbol.uppercased())")
-                .font(.system(size: 11, weight: .medium, design: .rounded))
-                .monospacedDigit()
-                .foregroundStyle(Color.theme.secondaryText)
-                .lineLimit(1)
-                .minimumScaleFactor(0.75)
-        }
-        .fixedSize(horizontal: true, vertical: false)
-    }
+    
     
     // MARK: - Right Column (Live Price & Change / P&L Badge)
     private var rightColumn: some View {
-        let isPositive = showHoldingColumn
-            ? (coin.profitLoss >= 0)
-            : ((coin.priceChangePercentage24H ?? 0) >= 0)
+        let isPositive =  ((coin.priceChangePercentage24H ?? 0) >= 0)
         
-        let rawPercent = showHoldingColumn
-            ? coin.profitLossPercentage.asPercentString()
-            : (coin.priceChangePercentage24H?.asPercentString() ?? "0.00%")
+        let rawPercent =  (coin.priceChangePercentage24H?.asPercentString() ?? "0.00%")
         
         let formattedPercent = (isPositive && !rawPercent.hasPrefix("+"))
             ? "+\(rawPercent)"
@@ -244,7 +218,7 @@ extension CoinRowView {
                     .fill(badgeColor.opacity(0.12))
             )
         }
-        .frame(minWidth: 88, alignment: .trailing)
+        .frame(width: 88, alignment: .trailing)
     }
 }
 
@@ -253,7 +227,6 @@ extension CoinRowView {
     VStack(spacing: 12) {
         CoinRowView(
             coin: DeveloperPreview.instance.coin,
-            showHoldingColumn: false,
             isFavorite: true,
             onFavoriteTapped: {}
         )
@@ -262,8 +235,7 @@ extension CoinRowView {
             .background(Color.theme.secondaryText.opacity(0.15))
         
         CoinRowView(
-            coin: DeveloperPreview.instance.coin,
-            showHoldingColumn: true
+            coin: DeveloperPreview.instance.coin
         )
     }
     .padding(16)
@@ -275,7 +247,6 @@ extension CoinRowView {
     VStack(spacing: 12) {
         CoinRowView(
             coin: DeveloperPreview.instance.coin,
-            showHoldingColumn: false,
             isFavorite: false,
             onFavoriteTapped: {}
         )
@@ -284,8 +255,7 @@ extension CoinRowView {
             .background(Color.theme.secondaryText.opacity(0.15))
         
         CoinRowView(
-            coin: DeveloperPreview.instance.coin,
-            showHoldingColumn: true
+            coin: DeveloperPreview.instance.coin
         )
     }
     .padding(16)

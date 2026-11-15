@@ -59,14 +59,23 @@ struct ChartView: View {
     }
     
     private var activePrice: Double {
-        scrubbedPoint?.price ?? (prices.last ?? coin.currentPrice)
+        if selectedRange == .day && scrubbedPoint == nil {
+            return coin.currentPrice
+        }
+        return scrubbedPoint?.price ?? (prices.last ?? coin.currentPrice)
     }
     
     private var priceDifference: Double {
-        activePrice - startingPrice
+        if selectedRange == .day && scrubbedPoint == nil, let diff24H = coin.priceChange24H {
+            return diff24H
+        }
+        return activePrice - startingPrice
     }
     
     private var percentageChange: Double {
+        if selectedRange == .day && scrubbedPoint == nil, let change24H = coin.priceChangePercentage24H {
+            return change24H
+        }
         guard startingPrice > 0 else { return 0 }
         return (priceDifference / startingPrice) * 100
     }

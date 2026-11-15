@@ -387,33 +387,44 @@ extension MarketView {
     }
     
     private var columnTitles: some View {
-        HStack(spacing: 6) {
-            HStack(spacing: 4) {
-                Text("Coin")
+        HStack(spacing: 4) {
+            HStack(spacing: 3) {
+                Text("Rank")
+                    .lineLimit(1)
                 Image(systemName: "chevron.down")
+                    .font(.system(size: 8, weight: .bold))
                     .opacity((vm.sortOption == .rank || vm.sortOption == .rankReversed) ? 1.0 : 0.0)
                     .rotationEffect(Angle(degrees: vm.sortOption == .rank ? 0 : 180))
             }
+            .fixedSize()
+            .contentShape(Rectangle())
             .onTapGesture {
                 withAnimation(.default) {
                     vm.sortOption = vm.sortOption == .rank ? .rankReversed : .rank
                 }
             }
             
-            Spacer()
+            Text("Coin")
+                .lineLimit(1)
+                .frame(width: 86, alignment: .center)
+            
+            Spacer(minLength: 6)
             
             Text("7D Trend")
                 .font(.caption2)
                 .foregroundStyle(Color.theme.secondaryText.opacity(0.8))
-                .frame(width: 55, alignment: .center)
+                .frame(width: 60, alignment: .center)
             
-            HStack(spacing: 4) {
-                Text("Price / 24h")
+            HStack(spacing: 3) {
+                Text("Price")
+                    .lineLimit(1)
                 Image(systemName: "chevron.down")
+                    .font(.system(size: 8, weight: .bold))
                     .opacity((vm.sortOption == .price || vm.sortOption == .priceReversed) ? 1.0 : 0.0)
                     .rotationEffect(Angle(degrees: vm.sortOption == .price ? 0 : 180))
             }
-            .frame(minWidth: 85, alignment: .trailing)
+            .frame(width: 88, alignment: .trailing)
+            .contentShape(Rectangle())
             .onTapGesture {
                 withAnimation(.default) {
                     vm.sortOption = vm.sortOption == .price ? .priceReversed : .price
@@ -423,7 +434,7 @@ extension MarketView {
         .font(.caption)
         .fontWeight(.semibold)
         .foregroundStyle(Color.theme.secondaryText)
-        .padding(.horizontal)
+        .padding(.horizontal, 28)
         .padding(.vertical, 4)
     }
     
@@ -435,7 +446,6 @@ extension MarketView {
                 } label: {
                     CoinRowView(
                         coin: coin,
-                        showHoldingColumn: false,
                         isFavorite: vm.isWatchlisted(coin: coin),
                         onFavoriteTapped: {
                             withAnimation {
