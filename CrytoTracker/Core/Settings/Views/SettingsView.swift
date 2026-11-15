@@ -227,32 +227,53 @@ extension SettingsView {
             sectionHeader(title: "Trading & Orders", icon: "arrow.left.arrow.right")
             
             NavigationLink {
-                TransactionHistoryView()
+                ProfitAndLossView()
             } label: {
                 HStack(spacing: 12) {
                     ZStack {
                         Circle()
                             .fill(Color.theme.accent.opacity(0.1))
                             .frame(width: 40, height: 40)
-                        Image(systemName: "clock.arrow.circlepath")
+                        Image(systemName: "chart.line.uptrend.xyaxis")
                             .font(.system(size: 18, weight: .semibold))
                             .foregroundStyle(Color.theme.accent)
                     }
                     
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Transaction History")
+                        Text("Profit and Loss")
                             .font(.headline)
                             .foregroundStyle(Color.theme.accent)
                         
-                        Text("View all recorded buy and sell executions")
-                            .font(.caption)
-                            .foregroundStyle(Color.theme.secondaryText)
+                        let summary = vm.realizedPnLSummary
+                        if summary.totalClosedTrades > 0 {
+                            Text("Realized P&L: \(summary.isProfitable ? "+" : "")\(summary.totalRealizedPnL.asCurrencyWith2Decimals())")
+                                .font(.caption)
+                                .fontWeight(.semibold)
+                                .foregroundStyle(summary.isProfitable ? Color.theme.green : Color.theme.red)
+                        } else {
+                            Text("Track full profit & loss from buying & selling coins")
+                                .font(.caption)
+                                .foregroundStyle(Color.theme.secondaryText)
+                        }
                     }
                     
                     Spacer()
                     
+                    let summary = vm.realizedPnLSummary
+                    if summary.totalClosedTrades > 0 {
+                        Text("\(summary.isProfitable ? "+" : "")\(summary.totalRealizedPercentage.asPercentString())")
+                            .font(.caption2)
+                            .fontWeight(.bold)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 3)
+                            .background((summary.isProfitable ? Color.theme.green : Color.theme.red).opacity(0.12))
+                            .foregroundStyle(summary.isProfitable ? Color.theme.green : Color.theme.red)
+                            .clipShape(Capsule())
+                    }
+                    
                     HStack(spacing: 6) {
-                        Text("\(vm.transactions.count)")
+                        let count = vm.transactions.filter { ($0.coinID ?? "") != "usd-cash" }.count
+                        Text("\(count)")
                             .font(.subheadline)
                             .fontWeight(.bold)
                             .padding(.horizontal, 8)

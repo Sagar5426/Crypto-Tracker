@@ -33,7 +33,7 @@
 		459ED36030A8B9E900116335 /* LaunchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 459ED31D30A8B9E900116335 /* LaunchView.swift */; };
 		459ED36130A8B9E900116335 /* CashWalletView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 459ED32030A8B9E900116335 /* CashWalletView.swift */; };
 		459ED36230A8B9E900116335 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 459ED32130A8B9E900116335 /* SettingsView.swift */; };
-		459ED36330A8B9E900116335 /* TransactionHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 459ED32230A8B9E900116335 /* TransactionHistoryView.swift */; };
+		459ED36330A8B9E900116335 /* ProfitAndLossView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 459ED32230A8B9E900116335 /* ProfitAndLossView.swift */; };
 		459ED36430A8B9E900116335 /* Color.swift in Sources */ = {isa = PBXBuildFile; fileRef = 459ED32630A8B9E900116335 /* Color.swift */; };
 		459ED36530A8B9E900116335 /* Date.swift in Sources */ = {isa = PBXBuildFile; fileRef = 459ED32730A8B9E900116335 /* Date.swift */; };
 		459ED36630A8B9E900116335 /* Double.swift in Sources */ = {isa = PBXBuildFile; fileRef = 459ED32830A8B9E900116335 /* Double.swift */; };
@@ -95,7 +95,7 @@
 		459ED31D30A8B9E900116335 /* LaunchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchView.swift; sourceTree = "<group>"; };
 		459ED32030A8B9E900116335 /* CashWalletView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CashWalletView.swift; sourceTree = "<group>"; };
 		459ED32130A8B9E900116335 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
-		459ED32230A8B9E900116335 /* TransactionHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransactionHistoryView.swift; sourceTree = "<group>"; };
+		459ED32230A8B9E900116335 /* ProfitAndLossView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfitAndLossView.swift; sourceTree = "<group>"; };
 		459ED32630A8B9E900116335 /* Color.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Color.swift; sourceTree = "<group>"; };
 		459ED32730A8B9E900116335 /* Date.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Date.swift; sourceTree = "<group>"; };
 		459ED32830A8B9E900116335 /* Double.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Double.swift; sourceTree = "<group>"; };
@@ -128,7 +128,7 @@
 		459ED38330A8F63600116335 /* HeaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeaderView.swift; sourceTree = "<group>"; };
 		459ED38B30A9FF9600116335 /* CoinInvestmentCardSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoinInvestmentCardSection.swift; sourceTree = "<group>"; };
 		459ED38D30AA041B00116335 /* CoinInvestmentBreakdownView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoinInvestmentBreakdownView.swift; sourceTree = "<group>"; };
-		459ED38F30AA3F7F00116335 /* EditTransactionSheet.swift */ = {isa = PBXFileReference; path = EditTransactionSheet.swift; sourceTree = "<group>"; };
+		459ED38F30AA3F7F00116335 /* EditTransactionSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditTransactionSheet.swift; sourceTree = "<group>"; };
 		45B438442E894416005778D8 /* CrytoTracker.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CrytoTracker.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -263,7 +263,7 @@
 			children = (
 				459ED32030A8B9E900116335 /* CashWalletView.swift */,
 				459ED32130A8B9E900116335 /* SettingsView.swift */,
-				459ED32230A8B9E900116335 /* TransactionHistoryView.swift */,
+				459ED32230A8B9E900116335 /* ProfitAndLossView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -493,7 +493,7 @@
 				459ED36030A8B9E900116335 /* LaunchView.swift in Sources */,
 				459ED36130A8B9E900116335 /* CashWalletView.swift in Sources */,
 				459ED36230A8B9E900116335 /* SettingsView.swift in Sources */,
-				459ED36330A8B9E900116335 /* TransactionHistoryView.swift in Sources */,
+				459ED36330A8B9E900116335 /* ProfitAndLossView.swift in Sources */,
 				459ED36430A8B9E900116335 /* Color.swift in Sources */,
 				459ED36530A8B9E900116335 /* Date.swift in Sources */,
 				459ED36630A8B9E900116335 /* Double.swift in Sources */,

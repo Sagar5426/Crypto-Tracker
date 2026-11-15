@@ -264,7 +264,11 @@ class MarketViewModel: ObservableObject {
     }
     
     func deleteTransaction(_ entity: TransactionEntity) {
+        let coinID = entity.coinID
         transactionDataService.deleteTransaction(entity: entity)
+        if let coinID = coinID, let coin = allCoins.first(where: { $0.id == coinID }) {
+            recalculatePortfolio(for: coin)
+        }
     }
     
     func updateTransactionAndRecalculate(
@@ -505,3 +509,167 @@ class MarketViewModel: ObservableObject {
         return stats
     }
 }
+// MARK: - Realized Profit & Loss Tracking Models
+struct RealizedTradeInfo: Identifiable, Equatable {
+    var id: String { transactionID }
+    let transactionID: String
+    let coinID: String
+    let coinSymbol: String
+    let coinName: String
+    let realizedPnL: Double
+    let realizedPercentage: Double
+    let costBasis: Double
+    let saleProceeds: Double
+    let sellAmount: Double
+    let sellPrice: Double
+    let avgCostPerUnit: Double
+    let isProfitable: Bool
+}
+
+struct RealizedPortfolioPnLSummary: Equatable {
+    let totalRealizedPnL: Double
+    let totalRealizedPercentage: Double
+    let totalCostBasis: Double
+    let totalProceeds: Double
+    let totalClosedTrades: Int
+    let profitableTradesCount: Int
+    let lossTradesCount: Int
+    let totalRealizedGains: Double
+    let totalRealizedLosses: Double
+    let tradeDetails: [String: RealizedTradeInfo]
+    
+    var winRate: Double {
+        totalClosedTrades > 0 ? (Double(profitableTradesCount) / Double(totalClosedTrades)) * 100.0 : 0.0
+    }
+    
+    var isProfitable: Bool {
+        totalRealizedPnL >= 0
+    }
+}
+
+// MARK: - Realized P&L Calculation Extension
+extension MarketViewModel {
+    
+    var realizedPnLSummary: RealizedPortfolioPnLSummary {
+        calculateRealizedPnL()
+    }
+    
+    func realizedInfo(for transactionID: String) -> RealizedTradeInfo? {
+        realizedPnLSummary.tradeDetails[transactionID]
+    }
+    
+    private func calculateRealizedPnL() -> RealizedPortfolioPnLSummary {
+        var tradeDetails: [String: RealizedTradeInfo] = [:]
+        var totalRealizedPnL: Double = 0.0
+        var totalCostBasis: Double = 0.0
+        var totalProceeds: Double = 0.0
+        var totalClosedTrades: Int = 0
+        var profitableCount: Int = 0
+        var lossCount: Int = 0
+        var totalRealizedGains: Double = 0.0
+        var totalRealizedLosses: Double = 0.0
+        
+        // Exclude USD cash deposits & withdrawals, only process crypto trades
+        let cryptoTxs = transactions.filter {
+            let type = ($0.transactionType ?? "").uppercased()
+            return ($0.coinID ?? "") != "usd-cash" && (type == "BUY" || type == "SELL")
+        }
+        
+        // Group by coinID
+        let groupedByCoin = Dictionary(grouping: cryptoTxs, by: { $0.coinID ?? "" })
+        
+        for (coinID, coinTxs) in groupedByCoin {
+            guard !coinID.isEmpty else { continue }
+            // Sort chronologically ascending (oldest first)
+            let sorted = coinTxs.sorted { ($0.timestamp ?? Date()) < ($1.timestamp ?? Date()) }
+            
+            var runningQty: Double = 0.0
+            var runningCost: Double = 0.0
+            
+            for tx in sorted {
+                let type = (tx.transactionType ?? "").uppercased()
+                let txId = tx.id ?? UUID().uuidString
+                let amount = tx.amount
+                let price = tx.pricePerCoin
+                let totalValue = tx.totalValue > 0 ? tx.totalValue : (amount * price)
+                
+                if type == "BUY" {
+                    runningQty += amount
+                    runningCost += totalValue
+                } else if type == "SELL" {
+                    let saleProceeds = totalValue
+                    let costBasis: Double
+                    let avgCostPerUnit: Double
+                    
+                    if runningQty > 0.00000001 && runningCost > 0 {
+                        avgCostPerUnit = runningCost / runningQty
+                        costBasis = min(runningCost, amount * avgCostPerUnit)
+                        
+                        let fraction = min(1.0, amount / runningQty)
+                        runningCost = max(0, runningCost - (runningCost * fraction))
+                        runningQty = max(0, runningQty - amount)
+                    } else {
+                        // Fallback if coins were held without logged historical buy entries
+                        if let portfolioCoin = portfolioCoins.first(where: { $0.id == coinID }),
+                           let avgPrice = portfolioCoin.averageBuyPrice, avgPrice > 0 {
+                            avgCostPerUnit = avgPrice
+                            costBasis = amount * avgPrice
+                        } else {
+                            avgCostPerUnit = price
+                            costBasis = saleProceeds
+                        }
+                    }
+                    
+                    let pnl = saleProceeds - costBasis
+                    let pnlPercent = costBasis > 0 ? (pnl / costBasis) * 100.0 : 0.0
+                    let isProfit = pnl >= 0
+                    
+                    let tradeInfo = RealizedTradeInfo(
+                        transactionID: txId,
+                        coinID: coinID,
+                        coinSymbol: (tx.coinSymbol ?? "").uppercased(),
+                        coinName: tx.coinName ?? "",
+                        realizedPnL: pnl,
+                        realizedPercentage: pnlPercent,
+                        costBasis: costBasis,
+                        saleProceeds: saleProceeds,
+                        sellAmount: amount,
+                        sellPrice: price,
+                        avgCostPerUnit: avgCostPerUnit,
+                        isProfitable: isProfit
+                    )
+                    
+                    tradeDetails[txId] = tradeInfo
+                    totalRealizedPnL += pnl
+                    totalCostBasis += costBasis
+                    totalProceeds += saleProceeds
+                    totalClosedTrades += 1
+                    
+                    if pnl > 0.001 {
+                        profitableCount += 1
+                        totalRealizedGains += pnl
+                    } else if pnl < -0.001 {
+                        lossCount += 1
+                        totalRealizedLosses += abs(pnl)
+                    }
+                }
+            }
+        }
+        
+        let overallPercentage = totalCostBasis > 0 ? (totalRealizedPnL / totalCostBasis) * 100.0 : 0.0
+        
+        return RealizedPortfolioPnLSummary(
+            totalRealizedPnL: totalRealizedPnL,
+            totalRealizedPercentage: overallPercentage,
+            totalCostBasis: totalCostBasis,
+            totalProceeds: totalProceeds,
+            totalClosedTrades: totalClosedTrades,
+            profitableTradesCount: profitableCount,
+            lossTradesCount: lossCount,
+            totalRealizedGains: totalRealizedGains,
+            totalRealizedLosses: totalRealizedLosses,
+            tradeDetails: tradeDetails
+        )
+    }
+}
+
