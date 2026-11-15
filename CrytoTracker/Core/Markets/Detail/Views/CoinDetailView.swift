@@ -48,10 +48,7 @@ struct CoinDetailView: View {
                 
                 // Personal Portfolio Holdings (with real data)
                 if userHasHoldings, let holding = userHoldingCoin {
-                    CoinInvestmentCardSection(
-                        coin: holding,
-                        onViewBreakdownTapped: { }
-                    )
+                    CoinInvestmentCardSection(coin: holding)
                 }
                 
                 // Market Overview Grid

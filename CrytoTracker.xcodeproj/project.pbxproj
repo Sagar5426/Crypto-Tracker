@@ -65,6 +65,7 @@
 		459ED38730A9032E00116335 /* SwiftfulUI in Frameworks */ = {isa = PBXBuildFile; productRef = 459ED38630A9032E00116335 /* SwiftfulUI */; };
 		459ED38A30A9034100116335 /* SwiftfulRouting in Frameworks */ = {isa = PBXBuildFile; productRef = 459ED38930A9034100116335 /* SwiftfulRouting */; };
 		459ED38C30A9FF9600116335 /* CoinInvestmentCardSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 459ED38B30A9FF9600116335 /* CoinInvestmentCardSection.swift */; };
+		459ED38E30AA041B00116335 /* CoinInvestmentBreakdownView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 459ED38D30AA041B00116335 /* CoinInvestmentBreakdownView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -124,7 +125,8 @@
 		459ED34730A8B9E900116335 /* PortfolioContainer.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = PortfolioContainer.xcdatamodel; sourceTree = "<group>"; };
 		459ED38130A8C13900116335 /* PortfolioCoinRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PortfolioCoinRowView.swift; sourceTree = "<group>"; };
 		459ED38330A8F63600116335 /* HeaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeaderView.swift; sourceTree = "<group>"; };
-		459ED38B30A9FF9600116335 /* CoinInvestmentCardSection.swift */ = {isa = PBXFileReference; path = CoinInvestmentCardSection.swift; sourceTree = "<group>"; };
+		459ED38B30A9FF9600116335 /* CoinInvestmentCardSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoinInvestmentCardSection.swift; sourceTree = "<group>"; };
+		459ED38D30AA041B00116335 /* CoinInvestmentBreakdownView.swift */ = {isa = PBXFileReference; path = CoinInvestmentBreakdownView.swift; sourceTree = "<group>"; };
 		45B438442E894416005778D8 /* CrytoTracker.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CrytoTracker.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -197,6 +199,7 @@
 				459ED30C30A8B9E900116335 /* CoinInvestmentCard.swift */,
 				459ED30D30A8B9E900116335 /* CoinDetailView.swift */,
 				459ED38B30A9FF9600116335 /* CoinInvestmentCardSection.swift */,
+				459ED38D30AA041B00116335 /* CoinInvestmentBreakdownView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -460,6 +463,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				459ED38E30AA041B00116335 /* CoinInvestmentBreakdownView.swift in Sources */,
 				459ED34B30A8B9E900116335 /* CircleButtonAnimationView.swift in Sources */,
 				459ED34C30A8B9E900116335 /* CircleButtonView.swift in Sources */,
 				459ED34D30A8B9E900116335 /* CoinImageView.swift in Sources */,

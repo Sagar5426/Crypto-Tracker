@@ -8,8 +8,11 @@
 import SwiftUI
 
 struct CoinInvestmentCardSection: View {
+    @EnvironmentObject private var homeVM: MarketViewModel
     let coin: CoinModel
     var onViewBreakdownTapped: (() -> Void)? = nil
+    
+    @State private var showBreakdownSheet: Bool = false
     
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -17,8 +20,19 @@ struct CoinInvestmentCardSection: View {
             
             CoinInvestmentCard(
                 coin: coin,
-                onViewBreakdownTapped: onViewBreakdownTapped
+                onViewBreakdownTapped: {
+                    if let onViewBreakdownTapped {
+                        onViewBreakdownTapped()
+                    } else {
+                        showBreakdownSheet = true
+                        HapticManager.notification(type: .success)
+                    }
+                }
             )
+        }
+        .sheet(isPresented: $showBreakdownSheet) {
+            CoinInvestmentBreakdownView(coin: coin)
+                .environmentObject(homeVM)
         }
     }
     
@@ -42,11 +56,11 @@ struct CoinInvestmentCardSection: View {
     ZStack {
         Color.theme.background.ignoresSafeArea()
         CoinInvestmentCardSection(
-            coin: DeveloperPreview.instance.coin,
-            onViewBreakdownTapped: {}
+            coin: DeveloperPreview.instance.coin
         )
         .padding()
     }
+    .environmentObject(DeveloperPreview.instance.homeVM)
     .preferredColorScheme(.dark)
 }
 
@@ -54,11 +68,11 @@ struct CoinInvestmentCardSection: View {
     ZStack {
         Color.theme.background.ignoresSafeArea()
         CoinInvestmentCardSection(
-            coin: DeveloperPreview.instance.adaCoin,
-            onViewBreakdownTapped: {}
+            coin: DeveloperPreview.instance.adaCoin
         )
         .padding()
     }
+    .environmentObject(DeveloperPreview.instance.homeVM)
     .preferredColorScheme(.dark)
 }
 
@@ -66,10 +80,10 @@ struct CoinInvestmentCardSection: View {
     ZStack {
         Color.theme.background.ignoresSafeArea()
         CoinInvestmentCardSection(
-            coin: DeveloperPreview.instance.coin,
-            onViewBreakdownTapped: {}
+            coin: DeveloperPreview.instance.coin
         )
         .padding()
     }
+    .environmentObject(DeveloperPreview.instance.homeVM)
     .preferredColorScheme(.light)
 }
