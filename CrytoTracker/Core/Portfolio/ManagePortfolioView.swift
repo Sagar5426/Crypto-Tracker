@@ -20,8 +20,10 @@ struct ManagePortfolioView: View {
     @State private var selectedTab: PortfolioTab = .myHoldings
     @State private var searchText: String = ""
     @State private var filterCategory: AssetCategory = .all
+    @Namespace private var portfolioTabNamespace
     
     // Trade Studio State
+    @Namespace private var tradeToggleNamespace
     @State private var tradeType: TransactionType = .buy
     @State private var inputMode: InputMode = .fiat
     @State private var quantityText: String = ""
@@ -29,7 +31,6 @@ struct ManagePortfolioView: View {
     @State private var orderExecuted: Bool = false
     @State private var coinToDelete: CoinModel? = nil
     @State private var showDeleteConfirmation: Bool = false
-    @State private var showQuickDepositToast: Bool = false
     
     enum PortfolioTab: String, CaseIterable, Identifiable {
         case myHoldings = "My Holdings"
@@ -100,7 +101,7 @@ struct ManagePortfolioView: View {
     }
     
     private var themeColor: Color {
-        tradeType == .buy ? Color.theme.green : Color.theme.red
+        tradeType == .buy ? Color.theme.green.opacity(0.8) : Color.theme.red
     }
     
     // MARK: - Body
@@ -192,13 +193,8 @@ extension ManagePortfolioView {
             // Financial Quick Summary Card (Cash + Portfolio Value)
             financialOverviewCard
             
-            // Segmented Mode Selector
-            Picker("Mode", selection: $selectedTab) {
-                Text("My Holdings (\(vm.portfolioCoins.count))").tag(PortfolioTab.myHoldings)
-                Text("Explore All (\(vm.allCoins.count))").tag(PortfolioTab.addAsset)
-            }
-            .pickerStyle(.segmented)
-            .padding(.horizontal, 16)
+            // Custom Mode Selector Toggle (My Holdings vs Explore All)
+            portfolioModeToggle
             
             // Search Bar
             SearchBarView(searchText: $searchText)
@@ -294,40 +290,72 @@ extension ManagePortfolioView {
                     .lineLimit(1)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            
-            // Quick Deposit Button
-            Button {
-                vm.depositCash(amount: 5000)
-                HapticManager.notification(type: .success)
-                withAnimation {
-                    showQuickDepositToast = true
-                }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                    withAnimation {
-                        showQuickDepositToast = false
-                    }
-                }
-            } label: {
-                HStack(spacing: 4) {
-                    Image(systemName: "plus")
-                        .font(.system(size: 10, weight: .bold))
-                    Text("Add $5k")
-                        .font(.system(size: 11, weight: .bold))
-                }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 7)
-                .background(Color.theme.green.opacity(0.15))
-                .foregroundStyle(Color.theme.green)
-                .clipShape(Capsule())
-            }
-            .buttonStyle(.plain)
         }
-        .padding(.horizontal, 14)
+        .padding(.horizontal, 16)
         .padding(.vertical, 12)
         .background(
             RoundedRectangle(cornerRadius: 16)
                 .fill(Color.theme.background)
                 .shadow(color: Color.theme.accent.opacity(0.04), radius: 6, x: 0, y: 2)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(Color.theme.secondaryText.opacity(0.12), lineWidth: 1)
+                )
+        )
+        .padding(.horizontal, 16)
+    }
+    
+    // MARK: - Custom Mode Selector Toggle (My Holdings vs Explore All)
+    private var portfolioModeToggle: some View {
+        HStack(spacing: 6) {
+            ForEach(PortfolioTab.allCases) { tab in
+                let isSelected = selectedTab == tab
+                let count = tab == .myHoldings ? vm.portfolioCoins.count : vm.allCoins.count
+                let icon = tab == .myHoldings ? "briefcase.fill" : "globe"
+                
+                Button {
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+                        selectedTab = tab
+                    }
+                    HapticManager.selection()
+                } label: {
+                    HStack(spacing: 7) {
+                        Image(systemName: icon)
+                            .font(.system(size: 13, weight: .bold))
+                        
+                        Text(tab.rawValue)
+                            .font(.system(size: 13, weight: .bold, design: .rounded))
+                        
+                        // Count badge
+                        Text("\(count)")
+                            .font(.system(size: 11, weight: .bold, design: .rounded))
+                            .padding(.horizontal, 7)
+                            .padding(.vertical, 2.5)
+                            .background(
+                                Capsule()
+                                    .fill(isSelected ? Color.theme.background.opacity(0.18) : Color.theme.secondaryText.opacity(0.12))
+                            )
+                            .foregroundStyle(isSelected ? Color.theme.background : Color.theme.secondaryText)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    .background {
+                        if isSelected {
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(Color.theme.accent)
+                                .shadow(color: Color.theme.accent.opacity(0.15), radius: 6, x: 0, y: 2)
+                                .matchedGeometryEffect(id: "portfolioTabBackground", in: portfolioTabNamespace)
+                        }
+                    }
+                    .foregroundStyle(isSelected ? Color.theme.background : Color.theme.secondaryText)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(4)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color.theme.background)
                 .overlay(
                     RoundedRectangle(cornerRadius: 16)
                         .stroke(Color.theme.secondaryText.opacity(0.12), lineWidth: 1)
@@ -729,8 +757,10 @@ extension ManagePortfolioView {
                 }
             } label: {
                 HStack(spacing: 5) {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 14, weight: .bold))
+                    if initialCoin == nil {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 14, weight: .bold))
+                    }
                     Text(initialCoin != nil ? "Close" : "Portfolio")
                         .font(.system(size: 15, weight: .semibold))
                 }
@@ -742,9 +772,6 @@ extension ManagePortfolioView {
             
             // Coin Symbol & Rank Tag
             HStack(spacing: 6) {
-                Text(coin.symbol.uppercased())
-                    .font(.system(size: 16, weight: .bold, design: .rounded))
-                    .foregroundStyle(Color.theme.accent)
                 
                 Text("#\(coin.rank)")
                     .font(.system(size: 11, weight: .bold, design: .monospaced))
@@ -753,6 +780,10 @@ extension ManagePortfolioView {
                     .background(Color.theme.secondaryText.opacity(0.12))
                     .foregroundStyle(Color.theme.secondaryText)
                     .clipShape(Capsule())
+                
+                Text(coin.symbol.uppercased())
+                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .foregroundStyle(Color.theme.accent)
             }
             
             Spacer()
@@ -770,7 +801,7 @@ extension ManagePortfolioView {
         HStack(spacing: 8) {
             // BUY Tab
             Button {
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
                     tradeType = .buy
                 }
                 HapticManager.selection()
@@ -784,18 +815,21 @@ extension ManagePortfolioView {
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 12)
-                .background(
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(tradeType == .buy ? Color.theme.green : Color.clear)
-                        .shadow(color: tradeType == .buy ? Color.theme.green.opacity(0.3) : Color.clear, radius: 8, x: 0, y: 3)
-                )
+                .background {
+                    if tradeType == .buy {
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color.theme.green.opacity(0.8))
+                            .shadow(color: Color.theme.green.opacity(0.3), radius: 8, x: 0, y: 3)
+                            .matchedGeometryEffect(id: "tradeToggleBackground", in: tradeToggleNamespace)
+                    }
+                }
                 .foregroundStyle(tradeType == .buy ? Color.white : Color.theme.secondaryText)
             }
             .buttonStyle(.plain)
             
             // SELL Tab
             Button {
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
                     tradeType = .sell
                 }
                 HapticManager.selection()
@@ -809,11 +843,14 @@ extension ManagePortfolioView {
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 12)
-                .background(
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(tradeType == .sell ? Color.theme.red : Color.clear)
-                        .shadow(color: tradeType == .sell ? Color.theme.red.opacity(0.3) : Color.clear, radius: 8, x: 0, y: 3)
-                )
+                .background {
+                    if tradeType == .sell {
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color.theme.red)
+                            .shadow(color: Color.theme.red.opacity(0.35), radius: 8, x: 0, y: 3)
+                            .matchedGeometryEffect(id: "tradeToggleBackground", in: tradeToggleNamespace)
+                    }
+                }
                 .foregroundStyle(tradeType == .sell ? Color.white : Color.theme.secondaryText)
             }
             .buttonStyle(.plain)
@@ -1024,7 +1061,7 @@ extension ManagePortfolioView {
                 HStack(spacing: 8) {
                     ForEach([50.0, 100.0, 500.0, 1000.0], id: \.self) { amount in
                         Button {
-                            setFiatAmount(amount: amount, price: coin.currentPrice)
+                            addFiatAmount(delta: amount, price: coin.currentPrice)
                         } label: {
                             Text("+$\(Int(amount))")
                                 .font(.system(size: 12, weight: .bold))
@@ -1132,20 +1169,6 @@ extension ManagePortfolioView {
                     }
                     
                     Spacer()
-                    
-                    Button {
-                        vm.depositCash(amount: 5000)
-                        HapticManager.notification(type: .success)
-                    } label: {
-                        Text("+Deposit $5k")
-                            .font(.caption2)
-                            .fontWeight(.bold)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 5)
-                            .background(Color.theme.green)
-                            .foregroundStyle(Color.black)
-                            .clipShape(Capsule())
-                    }
                 }
                 .padding(10)
                 .background(Color.theme.red.opacity(0.12))
@@ -1247,7 +1270,7 @@ extension ManagePortfolioView {
         isInsufficientCash: Bool
     ) -> some View {
         let isBuy = tradeType == .buy
-        let actionColor = isBuy ? Color.theme.green : Color.theme.red
+        let actionColor = isBuy ? Color.theme.green.opacity(0.8) : Color.theme.red
         
         var buttonTitle: String {
             if orderExecuted {
@@ -1391,11 +1414,25 @@ extension ManagePortfolioView {
         }
     }
     
+    private func addFiatAmount(delta: Double, price: Double) {
+        inputMode = .fiat
+        let currentFiat = Double(fiatText) ?? 0
+        let newFiat = currentFiat + delta
+        fiatText = newFiat.truncatingRemainder(dividingBy: 1) == 0 ? String(format: "%.0f", newFiat) : String(format: "%.2f", newFiat)
+        if price > 0 {
+            let qty = newFiat / price
+            quantityText = qty.truncatingRemainder(dividingBy: 1) == 0 ? String(format: "%.0f", qty) : String(format: "%.4f", qty)
+        }
+        HapticManager.notification(type: .success)
+    }
+    
     private func setFiatAmount(amount: Double, price: Double) {
         inputMode = .fiat
-        fiatText = String(format: "%.0f", amount)
-        let qty = amount / price
-        quantityText = String(format: "%.4f", qty)
+        fiatText = amount.truncatingRemainder(dividingBy: 1) == 0 ? String(format: "%.0f", amount) : String(format: "%.2f", amount)
+        if price > 0 {
+            let qty = amount / price
+            quantityText = qty.truncatingRemainder(dividingBy: 1) == 0 ? String(format: "%.0f", qty) : String(format: "%.4f", qty)
+        }
         HapticManager.notification(type: .success)
     }
     
