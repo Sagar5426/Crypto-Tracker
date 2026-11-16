@@ -224,7 +224,6 @@ extension SettingsView {
     // MARK: - Trading & Transactions Card
     private var tradingAndTransactionsCard: some View {
         VStack(alignment: .leading, spacing: 14) {
-            sectionHeader(title: "Trading & Orders", icon: "arrow.left.arrow.right")
             
             NavigationLink {
                 ProfitAndLossView()
@@ -244,48 +243,13 @@ extension SettingsView {
                             .font(.headline)
                             .foregroundStyle(Color.theme.accent)
                         
-                        let summary = vm.realizedPnLSummary
-                        if summary.totalClosedTrades > 0 {
-                            Text("Realized P&L: \(summary.isProfitable ? "+" : "")\(summary.totalRealizedPnL.asCurrencyWith2Decimals())")
-                                .font(.caption)
-                                .fontWeight(.semibold)
-                                .foregroundStyle(summary.isProfitable ? Color.theme.green : Color.theme.red)
-                        } else {
-                            Text("Track full profit & loss from buying & selling coins")
-                                .font(.caption)
-                                .foregroundStyle(Color.theme.secondaryText)
-                        }
                     }
                     
                     Spacer()
                     
-                    let summary = vm.realizedPnLSummary
-                    if summary.totalClosedTrades > 0 {
-                        Text("\(summary.isProfitable ? "+" : "")\(summary.totalRealizedPercentage.asPercentString())")
-                            .font(.caption2)
-                            .fontWeight(.bold)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 3)
-                            .background((summary.isProfitable ? Color.theme.green : Color.theme.red).opacity(0.12))
-                            .foregroundStyle(summary.isProfitable ? Color.theme.green : Color.theme.red)
-                            .clipShape(Capsule())
-                    }
-                    
-                    HStack(spacing: 6) {
-                        let count = vm.transactions.filter { ($0.coinID ?? "") != "usd-cash" }.count
-                        Text("\(count)")
-                            .font(.subheadline)
-                            .fontWeight(.bold)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 3)
-                            .background(Color.theme.accent.opacity(0.12))
-                            .clipShape(Capsule())
-                            .foregroundStyle(Color.theme.accent)
-                        
-                        Image(systemName: "chevron.right")
-                            .font(.caption)
-                            .foregroundStyle(Color.theme.secondaryText.opacity(0.6))
-                    }
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
+                        .foregroundStyle(Color.theme.secondaryText.opacity(0.6))
                 }
                 .padding(.vertical, 2)
             }

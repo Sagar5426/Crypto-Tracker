@@ -33,6 +33,10 @@ class TransactionDataService {
     
     @Published var savedTransactions: [TransactionEntity] = []
     
+    var context: NSManagedObjectContext {
+        container.viewContext
+    }
+    
     init() {
         container = NSPersistentContainer(name: containerName)
         container.loadPersistentStores { _, error in

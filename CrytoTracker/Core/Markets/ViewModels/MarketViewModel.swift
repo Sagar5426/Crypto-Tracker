@@ -336,6 +336,38 @@ class MarketViewModel: ObservableObject {
         transactionDataService.clearAllTransactions()
     }
     
+    func loadMockTransactionsForPreview() {
+        let cal = Calendar.current
+        let now = Date()
+        let context = transactionDataService.context
+        
+        let txs: [(coinID: String, name: String, symbol: String, type: TransactionType, amount: Double, price: Double, daysAgo: Int)] = [
+            ("bitcoin", "Bitcoin", "BTC", .buy, 0.5, 50_000.0, 14),
+            ("ethereum", "Ethereum", "ETH", .buy, 4.0, 3_000.0, 10),
+            ("solana", "Solana", "SOL", .buy, 25.0, 120.0, 8),
+            ("bitcoin", "Bitcoin", "BTC", .sell, 0.25, 65_000.0, 5),
+            ("ethereum", "Ethereum", "ETH", .sell, 2.0, 2_600.0, 3),
+            ("solana", "Solana", "SOL", .sell, 15.0, 180.0, 1)
+        ]
+        
+        var mockEntities: [TransactionEntity] = []
+        for item in txs {
+            let entity = TransactionEntity(context: context)
+            entity.id = UUID().uuidString
+            entity.coinID = item.coinID
+            entity.coinName = item.name
+            entity.coinSymbol = item.symbol
+            entity.transactionType = item.type.rawValue
+            entity.amount = item.amount
+            entity.pricePerCoin = item.price
+            entity.totalValue = item.amount * item.price
+            entity.timestamp = cal.date(byAdding: .day, value: -item.daysAgo, to: now) ?? now
+            mockEntities.append(entity)
+        }
+        
+        self.transactions = mockEntities.reversed()
+    }
+    
     func transactions(for coinID: String) -> [TransactionEntity] {
         transactions.filter { $0.coinID == coinID }
     }
