@@ -818,7 +818,7 @@ extension SettingsView {
                 Text(subtitle)
                     .font(.caption2)
                     .foregroundStyle(Color.theme.secondaryText)
-                    .lineLimit(1)
+                    .lineLimit(2)
             }
             
             Spacer(minLength: 8)
