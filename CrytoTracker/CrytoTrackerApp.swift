@@ -27,9 +27,12 @@ struct CrytoTrackerApp: App {
                 // Added additional ZStack to avoid animation bug while transitioning
                 ZStack {
                     if showLaunchView {
-                        // for transitioning from launch screen to this
+                        // Smooth hero zoom and fade transition from launch screen into main view
                         LaunchView(showLaunchView: $showLaunchView)
-                            .transition(.move(edge: .leading))
+                            .transition(.asymmetric(
+                                insertion: .identity,
+                                removal: .opacity.combined(with: .scale(scale: 1.08))
+                            ))
                     }
                 }
                 .zIndex(2.0)
