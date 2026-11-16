@@ -6,12 +6,18 @@
 //
 
 import SwiftUI
+import SwiftfulUI
 
 struct ProfitAndLossView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var vm: MarketViewModel
     
     @State private var searchText: String = ""
+    @State private var scrollViewOffset: CGFloat = 0
+    @State private var topSafeAreaInset: CGFloat = 59
+    @State private var topSectionHeight: CGFloat = 320
+    @State private var isSpinning: Bool = false
+    @State private var selectedCoinForDetail: CoinModel? = nil
     
     private var cryptoTransactions: [TransactionEntity] {
         vm.transactions.filter {
@@ -101,53 +107,302 @@ struct ProfitAndLossView: View {
     }
     
     var body: some View {
-        ZStack {
+        ZStack(alignment: .top) {
             Color.theme.background
                 .ignoresSafeArea()
             
+            // Dynamic ambient crypto gradient glow that scrolls synchronously & fades out together
+            backGroundGradientLayer
+            
             if allCoinPnLSummaries.isEmpty {
-                emptyStateView
-                    .padding(.horizontal)
-            } else {
-                List {
-                    // Header Overview Card
-                    Section {
-                        SummaryMetricCardView()
-                            .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 6, trailing: 0))
-                            .listRowBackground(Color.clear)
-                            .listRowSeparator(.hidden)
-                    }
-                    
-                    // Single P&L Row Per Coin or Filtered Empty State
-                    if filteredCoinPnLList.isEmpty {
-                        Section {
-                            filterEmptyStateView
-                                .listRowInsets(EdgeInsets(top: 40, leading: 16, bottom: 40, trailing: 16))
-                                .listRowBackground(Color.clear)
-                                .listRowSeparator(.hidden)
-                        }
-                    } else {
-                        Section {
-                            ForEach(filteredCoinPnLList) { coinPnL in
-                                CoinTradeRowView(coinPnL: coinPnL)
-                                    .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
-                                    .listRowBackground(Color.clear)
-                                    .listRowSeparator(.hidden)
-                            }
-                        }
-                    }
+                VStack(spacing: 0) {
+                    topBar
+                    emptyStateView
+                        .padding(.horizontal)
                 }
-                .listStyle(.plain)
-                .scrollIndicators(.hidden)
-                .searchable(
-                    text: $searchText,
-                    placement: .navigationBarDrawer(displayMode: .always),
-                    prompt: "Search coins by name or symbol..."
-                )
+            } else {
+                scrollViewLayer
             }
         }
-        .navigationTitle("Profit and Loss")
-        .navigationBarTitleDisplayMode(.inline)
+        .background(
+            // Capture exact top safe area inset for the device
+            GeometryReader { geo in
+                Color.clear
+                    .onAppear {
+                        if geo.safeAreaInsets.top > 0 {
+                            topSafeAreaInset = geo.safeAreaInsets.top
+                        }
+                    }
+                    .onChange(of: geo.safeAreaInsets.top) { _, newValue in
+                        if newValue > 0 {
+                            topSafeAreaInset = newValue
+                        }
+                    }
+            }
+        )
+        .toolbar(.hidden, for: .navigationBar)
+        .fullScreenCover(item: $selectedCoinForDetail) { coin in
+            NavigationStack {
+                CoinDetailView(coin: coin)
+            }
+        }
+    }
+}
+
+// MARK: - Layout & Layers
+extension ProfitAndLossView {
+    
+    // MARK: - Unified Collapse & Staged Fade Progress
+    /// Progress from 0.0 (fully expanded at top) to 1.0 (fully collapsed and pinned)
+    private var collapseProgress: Double {
+        guard scrollViewOffset < 0 else { return 0.0 }
+        let collapseDistance = max(1.0, topSectionHeight - 10)
+        return min(1.0, Double(-scrollViewOffset / collapseDistance))
+    }
+    
+    /// Top Bar fades out earlier (0% -> 55%) so it never clashes with the status bar
+    private var headerFadeOpacity: Double {
+        let progress = min(1.0, max(0.0, collapseProgress / 0.55))
+        return 1.0 - (progress * progress)
+    }
+    
+    /// Metric Card fades out smoothly (15% -> 92%) as search bar approaches the top
+    private var metricCardFadeOpacity: Double {
+        let progress = min(1.0, max(0.0, (collapseProgress - 0.15) / 0.77))
+        return 1.0 - progress
+    }
+    
+    /// Overall opacity for ambient background gradient
+    private var contentFadeOpacity: Double {
+        max(0.0, 1.0 - collapseProgress)
+    }
+    
+    /// Solid background opacity for the search bar row itself (reaches 1.0 before pinning)
+    private var searchBarBackgroundOpacity: Double {
+        min(1.0, max(0.0, collapseProgress / 0.80))
+    }
+    
+    /// Safe-area extension opacity (activates only as Metric Card finishes fading so it never overlaps it)
+    private var safeAreaCoverOpacity: Double {
+        min(1.0, max(0.0, (collapseProgress - 0.75) / 0.20))
+    }
+    
+    // MARK: - Ambient Gradient Layer (Moves synchronously with scroll & fades out together)
+    private var backGroundGradientLayer: some View {
+        let isProfitable = (vm.realizedPnLSummary.totalRealizedPnL + vm.portfolioTotalProfitLoss) >= 0
+        let pnlColor = isProfitable ? Color.theme.green : Color.theme.red
+        
+        return ZStack {
+            // Multi-stop linear gradient for rich ambient background fade
+            LinearGradient(
+                stops: [
+                    .init(color: pnlColor.opacity(0.14), location: 0.0),
+                    .init(color: Color.theme.accent.opacity(0.07), location: 0.35),
+                    .init(color: pnlColor.opacity(0.03), location: 0.65),
+                    .init(color: Color.clear, location: 1.0)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            
+            // Soft ambient aura on top-trailing
+            RadialGradient(
+                gradient: Gradient(colors: [
+                    pnlColor.opacity(0.12),
+                    pnlColor.opacity(0.03),
+                    Color.clear
+                ]),
+                center: .topTrailing,
+                startRadius: 20,
+                endRadius: 280
+            )
+            
+            // Soft ambient accent aura on top-leading
+            RadialGradient(
+                gradient: Gradient(colors: [
+                    Color.theme.accent.opacity(0.10),
+                    Color.theme.accent.opacity(0.02),
+                    Color.clear
+                ]),
+                center: .topLeading,
+                startRadius: 20,
+                endRadius: 260
+            )
+        }
+        .ignoresSafeArea(edges: .top)
+        .frame(height: 420 + max(0, scrollViewOffset))
+        .offset(y: min(0, scrollViewOffset))
+        .opacity(contentFadeOpacity)
+        .allowsHitTesting(false)
+    }
+    
+    // MARK: - Collapsible Top Section (Top Bar + Metric Card)
+    private var topCollapsibleSection: some View {
+        VStack(spacing: 14) {
+            // 1. Collapsible Top Bar
+            topBar
+                .opacity(headerFadeOpacity)
+                .scaleEffect(1.0 - (collapseProgress * 0.03), anchor: .top)
+                .offset(y: min(0, -scrollViewOffset * 0.15))
+            
+            // 2. Collapsible Metric Card
+            SummaryMetricCardView()
+                .opacity(metricCardFadeOpacity)
+                .scaleEffect(1.0 - (collapseProgress * 0.04), anchor: .top)
+        }
+        .background(
+            GeometryReader { geo in
+                Color.clear
+                    .onAppear {
+                        if geo.size.height > 0 {
+                            topSectionHeight = geo.size.height + 12
+                        }
+                    }
+                    .onChange(of: geo.size.height) { _, newHeight in
+                        if newHeight > 0 {
+                            topSectionHeight = newHeight + 12
+                        }
+                    }
+            }
+        )
+        .allowsHitTesting(collapseProgress < 0.85)
+    }
+    
+    // MARK: - Collapsible Top Bar
+    private var topBar: some View {
+        HStack(alignment: .center, spacing: 12) {
+            Button {
+                dismiss()
+            } label: {
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(Color.theme.accent)
+                    .frame(width: 38, height: 38)
+                    .background(
+                        Circle()
+                            .fill(Color.theme.secondaryText.opacity(0.1))
+                    )
+            }
+            .buttonStyle(.plain)
+            
+            Text("Profit & Loss")
+                .font(.system(size: 28, weight: .bold, design: .rounded))
+                .foregroundStyle(Color.theme.accent)
+            
+            Spacer()
+            
+            Button {
+                HapticManager.notification(type: .success)
+                withAnimation(.easeInOut(duration: 0.6)) {
+                    isSpinning.toggle()
+                }
+                vm.reloadData()
+            } label: {
+                Image(systemName: "arrow.clockwise")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(Color.theme.accent)
+                    .rotationEffect(.degrees(vm.isLoading || isSpinning ? 360 : 0))
+                    .animation(
+                        vm.isLoading ? .linear(duration: 1).repeatForever(autoreverses: false) : .default,
+                        value: vm.isLoading
+                    )
+                    .frame(width: 38, height: 38)
+                    .background(
+                        Circle()
+                            .fill(Color.theme.secondaryText.opacity(0.1))
+                    )
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 8)
+    }
+    
+    // MARK: - Scroll View Layer
+    private var scrollViewLayer: some View {
+        ScrollViewWithOnScrollChanged(
+            .vertical,
+            showsIndicators: false,
+            content: {
+                LazyVStack(spacing: 12, pinnedViews: [.sectionHeaders]) {
+                    // Collapsible Top Section (Top Bar + Metric Card)
+                    topCollapsibleSection
+                        .zIndex(1)
+                    
+                    // Sticky Section: Search Bar sits below metricCard and sticks when scrolled
+                    Section {
+                        if filteredCoinPnLList.isEmpty {
+                            filterEmptyStateView
+                                .zIndex(0)
+                        } else {
+                            coinsLazyList
+                                .zIndex(0)
+                        }
+                    } header: {
+                        stickySearchBarRow
+                            .zIndex(10)
+                    }
+                }
+                .padding(.bottom, 24)
+            },
+            onScrollChanged: { offset in
+                scrollViewOffset = offset.y
+            }
+        )
+        .scrollDismissesKeyboard(.interactively)
+        .refreshable {
+            vm.reloadData()
+        }
+    }
+    
+    // MARK: - Sticky Search Bar Row
+    private var stickySearchBarRow: some View {
+        VStack(spacing: 0) {
+            SearchBarView(searchText: $searchText)
+                .padding(.top, 4)
+                .padding(.bottom, 10)
+            
+            // Divider line below search bar when sticky
+            Rectangle()
+                .fill(Color.theme.secondaryText.opacity(0.18))
+                .frame(height: 1)
+                .opacity(searchBarBackgroundOpacity)
+        }
+        .background(
+            ZStack(alignment: .top) {
+                // 1. Solid background strictly inside search bar bounds (never overlaps cards above)
+                Color.theme.background
+                    .opacity(searchBarBackgroundOpacity)
+                
+                // 2. Top safe area shield that locks in as the header finishes collapsing
+                Color.theme.background
+                    .frame(height: topSafeAreaInset + 2)
+                    .offset(y: -topSafeAreaInset)
+                    .ignoresSafeArea(edges: .top)
+                    .opacity(safeAreaCoverOpacity)
+            }
+        )
+        .compositingGroup()
+    }
+    
+    // MARK: - Coins Lazy List
+    private var coinsLazyList: some View {
+        LazyVStack(spacing: 12) {
+            ForEach(filteredCoinPnLList) { coinPnL in
+                if let coin = coinPnL.coinModel {
+                    Button {
+                        selectedCoinForDetail = coin
+                    } label: {
+                        CoinTradeRowView(coinPnL: coinPnL)
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.horizontal, 16)
+                } else {
+                    CoinTradeRowView(coinPnL: coinPnL)
+                        .padding(.horizontal, 16)
+                }
+            }
+        }
     }
 }
 
@@ -190,6 +445,10 @@ struct CoinPnLSummary: Identifiable {
     
     var hasRealizedActivity: Bool {
         closedTradesCount > 0
+    }
+    
+    var hasUnrealizedActivity: Bool {
+        closedTradesCount <= 0
     }
     
     var isNetProfitable: Bool {
@@ -243,6 +502,7 @@ extension ProfitAndLossView {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 32))
                 .foregroundStyle(Color.theme.secondaryText.opacity(0.7))
+                .padding(.top, 40)
             
             Text("No Matching Coins")
                 .font(.subheadline)

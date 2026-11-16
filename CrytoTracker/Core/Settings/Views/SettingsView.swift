@@ -16,6 +16,7 @@ struct SettingsView: View {
     @State private var cachedImageCount: Int = LocalFileManager.instance.getFolderItemCount(folderName: "coin_images")
     @State private var showClearCacheAlert: Bool = false
     @State private var showCacheClearedToast: Bool = false
+    @State private var showProfitAndLossView: Bool = false
     
     private let coingeckoURL = URL(string: "https://www.coingecko.com")!
     private let coingeckoApiURL = URL(string: "https://www.coingecko.com/en/api")!
@@ -86,6 +87,11 @@ struct SettingsView: View {
                 Button("Cancel", role: .cancel) { }
             } message: {
                 Text("This will remove all downloaded coin icons from local storage. They will be downloaded automatically when needed.")
+            }
+            .fullScreenCover(isPresented: $showProfitAndLossView) {
+                NavigationStack {
+                    ProfitAndLossView()
+                }
             }
         }
     }
@@ -223,48 +229,45 @@ extension SettingsView {
     
     // MARK: - Trading & Transactions Card
     private var tradingAndTransactionsCard: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            
-            NavigationLink {
-                ProfitAndLossView()
-            } label: {
-                HStack(spacing: 12) {
-                    ZStack {
-                        Circle()
-                            .fill(Color.theme.accent.opacity(0.1))
-                            .frame(width: 40, height: 40)
-                        Image(systemName: "chart.line.uptrend.xyaxis")
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundStyle(Color.theme.accent)
-                    }
-                    
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Profit and Loss")
-                            .font(.headline)
-                            .foregroundStyle(Color.theme.accent)
-                        
-                    }
-                    
-                    Spacer()
-                    
-                    Image(systemName: "chevron.right")
-                        .font(.caption)
-                        .foregroundStyle(Color.theme.secondaryText.opacity(0.6))
+        Button {
+            showProfitAndLossView = true
+        } label: {
+            HStack(spacing: 12) {
+                ZStack {
+                    Circle()
+                        .fill(Color.theme.accent.opacity(0.1))
+                        .frame(width: 40, height: 40)
+                    Image(systemName: "chart.line.uptrend.xyaxis")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(Color.theme.accent)
                 }
-                .padding(.vertical, 2)
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Profit and Loss")
+                        .font(.headline)
+                        .foregroundStyle(Color.theme.accent)
+                }
+                
+                Spacer()
+                
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundStyle(Color.theme.secondaryText.opacity(0.6))
             }
-            .buttonStyle(.plain)
+            .padding(.vertical, 2)
+            .padding(16)
+            .contentShape(RoundedRectangle(cornerRadius: 16))
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color.theme.background)
+                    .shadow(color: Color.theme.accent.opacity(0.04), radius: 6, x: 0, y: 2)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(Color.theme.secondaryText.opacity(0.1), lineWidth: 1)
+            )
         }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color.theme.background)
-                .shadow(color: Color.theme.accent.opacity(0.04), radius: 6, x: 0, y: 2)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(Color.theme.secondaryText.opacity(0.1), lineWidth: 1)
-        )
+        .buttonStyle(.plain)
     }
     
     // MARK: - Data Provider Card

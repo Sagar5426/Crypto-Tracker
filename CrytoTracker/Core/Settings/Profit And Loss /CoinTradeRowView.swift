@@ -43,9 +43,11 @@ struct CoinTradeRowView: View {
                 realizedSection
             }
             
-            // 3. Unrealised P&L Section
-            themedDivider
-            unrealizedSection
+            // 3. Unrealised P&L Section (Only shown when an open position exists)
+            if coinPnL.hasOpenPosition {
+                themedDivider
+                unrealizedSection
+            }
         }
         .padding(14)
         .background(
