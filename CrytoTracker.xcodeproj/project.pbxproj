@@ -132,9 +132,17 @@
 		459ED38D30AA041B00116335 /* CoinInvestmentBreakdownView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoinInvestmentBreakdownView.swift; sourceTree = "<group>"; };
 		459ED38F30AA3F7F00116335 /* EditTransactionSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditTransactionSheet.swift; sourceTree = "<group>"; };
 		459ED39130AB056F00116335 /* CoinTradeRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoinTradeRowView.swift; sourceTree = "<group>"; };
-		459ED39430AB17FB00116335 /* SummaryMetricCardView.swift */ = {isa = PBXFileReference; path = SummaryMetricCardView.swift; sourceTree = "<group>"; };
+		459ED39430AB17FB00116335 /* SummaryMetricCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SummaryMetricCardView.swift; sourceTree = "<group>"; };
 		45B438442E894416005778D8 /* CrytoTracker.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CrytoTracker.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		459ED39630AB2B0000116335 /* TradeBook */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = TradeBook;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		4579C5922E3A1ED200C447A9 /* Frameworks */ = {
@@ -276,6 +284,7 @@
 			children = (
 				459ED39330AB16FB00116335 /* Profit And Loss  */,
 				459ED32330A8B9E900116335 /* Views */,
+				459ED39630AB2B0000116335 /* TradeBook */,
 			);
 			path = Settings;
 			sourceTree = "<group>";
@@ -415,6 +424,9 @@
 			buildRules = (
 			);
 			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				459ED39630AB2B0000116335 /* TradeBook */,
 			);
 			name = CrytoTracker;
 			packageProductDependencies = (

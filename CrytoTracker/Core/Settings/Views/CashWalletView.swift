@@ -69,8 +69,6 @@ struct CashWalletView: View {
                 // Action Button
                 executeActionButton
                 
-                // Reset Balance Button
-                resetWalletButton
                 
                 // Cash Activity History
                 if !cashTransactions.isEmpty {
@@ -81,17 +79,6 @@ struct CashWalletView: View {
         }
         .navigationTitle("USD Cash Wallet")
         .navigationBarTitleDisplayMode(.inline)
-        .alert("Reset Wallet Balance", isPresented: $showResetConfirmation) {
-            Button("Reset to $10,000", role: .destructive) {
-                withAnimation {
-                    vm.resetCashWallet(to: 10_000.0)
-                }
-                HapticManager.notification(type: .success)
-            }
-            Button("Cancel", role: .cancel) { }
-        } message: {
-            Text("This will reset your simulated USD cash balance to $10,000.00. Your crypto holdings will remain untouched.")
-        }
     }
 }
 
@@ -402,20 +389,7 @@ extension CashWalletView {
         .buttonStyle(.plain)
     }
     
-    private var resetWalletButton: some View {
-        Button {
-            showResetConfirmation = true
-        } label: {
-            HStack(spacing: 6) {
-                Image(systemName: "arrow.counterclockwise")
-                Text("Reset Wallet Balance to $10,000")
-            }
-            .font(.caption)
-            .fontWeight(.semibold)
-            .foregroundStyle(Color.theme.secondaryText)
-        }
-        .padding(.top, 4)
-    }
+   
     
     private var cashActivitySection: some View {
         VStack(alignment: .leading, spacing: 10) {

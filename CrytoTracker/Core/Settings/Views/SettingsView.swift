@@ -17,6 +17,7 @@ struct SettingsView: View {
     @State private var showClearCacheAlert: Bool = false
     @State private var showCacheClearedToast: Bool = false
     @State private var showProfitAndLossView: Bool = false
+    @State private var showTradeBookView: Bool = false
     
     private let coingeckoURL = URL(string: "https://www.coingecko.com")!
     private let coingeckoApiURL = URL(string: "https://www.coingecko.com/en/api")!
@@ -37,6 +38,9 @@ struct SettingsView: View {
                         
                         // Trading & Transactions
                         tradingAndTransactionsCard
+                        
+                        // TradeBook
+                        tradeBookCard
                         
                         // Data Provider Section
                         dataProviderCard
@@ -91,6 +95,11 @@ struct SettingsView: View {
             .fullScreenCover(isPresented: $showProfitAndLossView) {
                 NavigationStack {
                     ProfitAndLossView()
+                }
+            }
+            .fullScreenCover(isPresented: $showTradeBookView) {
+                NavigationStack {
+                    TradeBookView()
                 }
             }
         }
@@ -246,6 +255,70 @@ extension SettingsView {
                     Text("Profit and Loss")
                         .font(.headline)
                         .foregroundStyle(Color.theme.accent)
+                }
+                
+                Spacer()
+                
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundStyle(Color.theme.secondaryText.opacity(0.6))
+            }
+            .padding(.vertical, 2)
+            .padding(16)
+            .contentShape(RoundedRectangle(cornerRadius: 16))
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color.theme.background)
+                    .shadow(color: Color.theme.accent.opacity(0.04), radius: 6, x: 0, y: 2)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(Color.theme.secondaryText.opacity(0.1), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+    
+    // MARK: - TradeBook Card
+    private var tradeBookCard: some View {
+        Button {
+            showTradeBookView = true
+        } label: {
+            HStack(spacing: 12) {
+                ZStack {
+                    Circle()
+                        .fill(Color.orange.opacity(0.12))
+                        .frame(width: 40, height: 40)
+                    Image(systemName: "book.closed.fill")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(Color.orange)
+                }
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 6) {
+                        Text("TradeBook")
+                            .font(.headline)
+                            .foregroundStyle(Color.theme.accent)
+                        
+                        let cryptoCount = vm.transactions.filter {
+                            let type = ($0.transactionType ?? "").uppercased()
+                            return ($0.coinID ?? "") != "usd-cash" && (type == "BUY" || type == "SELL")
+                        }.count
+                        
+                        if cryptoCount > 0 {
+                            Text("\(cryptoCount)")
+                                .font(.system(size: 11, weight: .bold))
+                                .padding(.horizontal, 7)
+                                .padding(.vertical, 2)
+                                .background(Color.orange.opacity(0.15))
+                                .foregroundStyle(Color.orange)
+                                .clipShape(Capsule())
+                        }
+                    }
+                    
+                    Text("All Buy & Sell trade orders and execution logs")
+                        .font(.caption2)
+                        .foregroundStyle(Color.theme.secondaryText)
                 }
                 
                 Spacer()
