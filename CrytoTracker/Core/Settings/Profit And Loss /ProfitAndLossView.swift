@@ -14,8 +14,7 @@ struct ProfitAndLossView: View {
     
     @State private var searchText: String = ""
     @State private var scrollViewOffset: CGFloat = 0
-    @State private var topSafeAreaInset: CGFloat = 59
-    @State private var topSectionHeight: CGFloat = 320
+    @State private var topSectionHeight: CGFloat = 220
     @State private var isSpinning: Bool = false
     @State private var selectedCoinForDetail: CoinModel? = nil
     
@@ -71,6 +70,11 @@ struct ProfitAndLossView: View {
             let unPct = hasOpenPos ? (portfolioCoin?.profitLossPercentage ?? (unCostBasis > 0 ? (unPnL / unCostBasis) * 100.0 : 0.0)) : 0.0
             let buyAvg = hasOpenPos ? (portfolioCoin?.averageBuyPrice ?? (holdings > 0 ? unCostBasis / holdings : curPrice)) : 0.0
             
+            // Exclude coins with zero realized and zero open position
+            guard closedCount > 0 || hasOpenPos else {
+                return nil
+            }
+            
             return CoinPnLSummary(
                 coinID: coinID,
                 coinName: name,
@@ -114,32 +118,23 @@ struct ProfitAndLossView: View {
             // Dynamic ambient crypto gradient glow that scrolls synchronously & fades out together
             backGroundGradientLayer
             
-            if allCoinPnLSummaries.isEmpty {
-                VStack(spacing: 0) {
-                    topBar
+            VStack(spacing: 0) {
+                // Header kept intact at the top
+                topBar
+                    .background(
+                        Color.theme.background
+                            .ignoresSafeArea(edges: .top)
+                            .opacity(headerBackgroundOpacity)
+                    )
+                
+                if allCoinPnLSummaries.isEmpty {
                     emptyStateView
                         .padding(.horizontal)
+                } else {
+                    scrollViewLayer
                 }
-            } else {
-                scrollViewLayer
             }
         }
-        .background(
-            // Capture exact top safe area inset for the device
-            GeometryReader { geo in
-                Color.clear
-                    .onAppear {
-                        if geo.safeAreaInsets.top > 0 {
-                            topSafeAreaInset = geo.safeAreaInsets.top
-                        }
-                    }
-                    .onChange(of: geo.safeAreaInsets.top) { _, newValue in
-                        if newValue > 0 {
-                            topSafeAreaInset = newValue
-                        }
-                    }
-            }
-        )
         .toolbar(.hidden, for: .navigationBar)
         .fullScreenCover(item: $selectedCoinForDetail) { coin in
             NavigationStack {
@@ -160,15 +155,14 @@ extension ProfitAndLossView {
         return min(1.0, Double(-scrollViewOffset / collapseDistance))
     }
     
-    /// Top Bar fades out earlier (0% -> 55%) so it never clashes with the status bar
-    private var headerFadeOpacity: Double {
-        let progress = min(1.0, max(0.0, collapseProgress / 0.55))
-        return 1.0 - (progress * progress)
+    /// Header background opacity turns solid as user scrolls past 30pt
+    private var headerBackgroundOpacity: Double {
+        min(1.0, max(0.0, -scrollViewOffset / 30.0))
     }
     
-    /// Metric Card fades out smoothly (15% -> 92%) as search bar approaches the top
+    /// Metric Card fades out smoothly (0% -> 75% of collapse) as search bar approaches the pin line
     private var metricCardFadeOpacity: Double {
-        let progress = min(1.0, max(0.0, (collapseProgress - 0.15) / 0.77))
+        let progress = min(1.0, max(0.0, collapseProgress / 0.75))
         return 1.0 - progress
     }
     
@@ -179,12 +173,7 @@ extension ProfitAndLossView {
     
     /// Solid background opacity for the search bar row itself (reaches 1.0 before pinning)
     private var searchBarBackgroundOpacity: Double {
-        min(1.0, max(0.0, collapseProgress / 0.80))
-    }
-    
-    /// Safe-area extension opacity (activates only as Metric Card finishes fading so it never overlaps it)
-    private var safeAreaCoverOpacity: Double {
-        min(1.0, max(0.0, (collapseProgress - 0.75) / 0.20))
+        min(1.0, max(0.0, collapseProgress / 0.85))
     }
     
     // MARK: - Ambient Gradient Layer (Moves synchronously with scroll & fades out together)
@@ -236,39 +225,30 @@ extension ProfitAndLossView {
         .allowsHitTesting(false)
     }
     
-    // MARK: - Collapsible Top Section (Top Bar + Metric Card)
-    private var topCollapsibleSection: some View {
-        VStack(spacing: 14) {
-            // 1. Collapsible Top Bar
-            topBar
-                .opacity(headerFadeOpacity)
-                .scaleEffect(1.0 - (collapseProgress * 0.03), anchor: .top)
-                .offset(y: min(0, -scrollViewOffset * 0.15))
-            
-            // 2. Collapsible Metric Card
-            SummaryMetricCardView()
-                .opacity(metricCardFadeOpacity)
-                .scaleEffect(1.0 - (collapseProgress * 0.04), anchor: .top)
-        }
-        .background(
-            GeometryReader { geo in
-                Color.clear
-                    .onAppear {
-                        if geo.size.height > 0 {
-                            topSectionHeight = geo.size.height + 12
+    // MARK: - Collapsible Metric Card Section
+    private var collapsibleMetricSection: some View {
+        SummaryMetricCardView()
+            .opacity(metricCardFadeOpacity)
+            .scaleEffect(1.0 - (collapseProgress * 0.03), anchor: .top)
+            .background(
+                GeometryReader { geo in
+                    Color.clear
+                        .onAppear {
+                            if geo.size.height > 0 {
+                                topSectionHeight = geo.size.height + 12
+                            }
                         }
-                    }
-                    .onChange(of: geo.size.height) { _, newHeight in
-                        if newHeight > 0 {
-                            topSectionHeight = newHeight + 12
+                        .onChange(of: geo.size.height) { _, newHeight in
+                            if newHeight > 0 {
+                                topSectionHeight = newHeight + 12
+                            }
                         }
-                    }
-            }
-        )
-        .allowsHitTesting(collapseProgress < 0.85)
+                }
+            )
+            .allowsHitTesting(collapseProgress < 0.85)
     }
     
-    // MARK: - Collapsible Top Bar
+    // MARK: - Header Bar (Kept Intact)
     private var topBar: some View {
         HStack(alignment: .center, spacing: 12) {
             Button {
@@ -316,6 +296,7 @@ extension ProfitAndLossView {
         }
         .padding(.horizontal, 16)
         .padding(.top, 8)
+        .padding(.bottom, 6)
     }
     
     // MARK: - Scroll View Layer
@@ -325,11 +306,11 @@ extension ProfitAndLossView {
             showsIndicators: false,
             content: {
                 LazyVStack(spacing: 12, pinnedViews: [.sectionHeaders]) {
-                    // Collapsible Top Section (Top Bar + Metric Card)
-                    topCollapsibleSection
+                    // Collapsible Metric Card
+                    collapsibleMetricSection
                         .zIndex(1)
                     
-                    // Sticky Section: Search Bar sits below metricCard and sticks when scrolled
+                    // Sticky Section: Search Bar sits below metricCard and sticks intact when scrolled
                     Section {
                         if filteredCoinPnLList.isEmpty {
                             filterEmptyStateView
@@ -343,12 +324,14 @@ extension ProfitAndLossView {
                             .zIndex(10)
                     }
                 }
+                .padding(.top, 4)
                 .padding(.bottom, 24)
             },
             onScrollChanged: { offset in
                 scrollViewOffset = offset.y
             }
         )
+        .clipped()
         .scrollDismissesKeyboard(.interactively)
         .refreshable {
             vm.reloadData()
@@ -369,20 +352,9 @@ extension ProfitAndLossView {
                 .opacity(searchBarBackgroundOpacity)
         }
         .background(
-            ZStack(alignment: .top) {
-                // 1. Solid background strictly inside search bar bounds (never overlaps cards above)
-                Color.theme.background
-                    .opacity(searchBarBackgroundOpacity)
-                
-                // 2. Top safe area shield that locks in as the header finishes collapsing
-                Color.theme.background
-                    .frame(height: topSafeAreaInset + 2)
-                    .offset(y: -topSafeAreaInset)
-                    .ignoresSafeArea(edges: .top)
-                    .opacity(safeAreaCoverOpacity)
-            }
+            Color.theme.background
+                .opacity(searchBarBackgroundOpacity)
         )
-        .compositingGroup()
     }
     
     // MARK: - Coins Lazy List
