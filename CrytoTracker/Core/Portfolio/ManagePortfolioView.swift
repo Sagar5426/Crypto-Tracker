@@ -566,7 +566,7 @@ extension ManagePortfolioView {
                 .fontWeight(.bold)
                 .foregroundStyle(Color.theme.accent)
             
-            Text("Use your simulated cash wallet to buy cryptocurrency and track portfolio gains, losses, and order execution logs.")
+            Text("Use your wallet fund to buy cryptocurrency and track portfolio gains, losses, and order execution logs.")
                 .font(.subheadline)
                 .foregroundStyle(Color.theme.secondaryText)
                 .multilineTextAlignment(.center)

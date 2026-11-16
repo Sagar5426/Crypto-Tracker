@@ -134,6 +134,7 @@ struct ProfitAndLossView: View {
                     scrollViewLayer
                 }
             }
+            .ignoresSafeArea(edges: .bottom)
         }
         .toolbar(.hidden, for: .navigationBar)
         .fullScreenCover(item: $selectedCoinForDetail) { coin in
@@ -325,13 +326,12 @@ extension ProfitAndLossView {
                     }
                 }
                 .padding(.top, 4)
-                .padding(.bottom, 24)
+                .padding(.bottom, 50)
             },
             onScrollChanged: { offset in
                 scrollViewOffset = offset.y
             }
         )
-        .clipped()
         .scrollDismissesKeyboard(.interactively)
         .refreshable {
             vm.reloadData()

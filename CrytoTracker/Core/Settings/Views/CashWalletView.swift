@@ -93,7 +93,7 @@ extension CashWalletView {
                         Image(systemName: "banknote.fill")
                             .font(.caption)
                             .foregroundStyle(Color.theme.green)
-                        Text("SIMULATED CASH WALLET")
+                        Text("WALLET FUND")
                             .font(.system(size: 11, weight: .bold))
                             .foregroundStyle(Color.theme.secondaryText)
                     }

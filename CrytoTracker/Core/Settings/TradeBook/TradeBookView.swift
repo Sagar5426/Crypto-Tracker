@@ -150,6 +150,7 @@ struct TradeBookView: View {
                     scrollViewLayer
                 }
             }
+            .ignoresSafeArea(edges: .bottom)
         }
         .toolbar(.hidden, for: .navigationBar)
         .sheet(item: $selectedTradeForDetail) { trade in
@@ -354,13 +355,12 @@ extension TradeBookView {
                     }
                 }
                 .padding(.top, 4)
-                .padding(.bottom, 24)
+                .padding(.bottom, 50)
             },
             onScrollChanged: { offset in
                 scrollViewOffset = offset.y
             }
         )
-        .clipped()
         .scrollDismissesKeyboard(.interactively)
         .refreshable {
             vm.reloadData()

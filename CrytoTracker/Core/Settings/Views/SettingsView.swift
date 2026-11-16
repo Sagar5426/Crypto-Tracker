@@ -105,7 +105,7 @@ struct SettingsView: View {
                 }
                 Button("Cancel", role: .cancel) { }
             } message: {
-                Text("This will restore your simulated cash wallet balance to the default $10,000.00.")
+                Text("This will restore your wallet fund balance to the default $10,000.00.")
             }
             .fullScreenCover(isPresented: $showProfitAndLossView) {
                 NavigationStack {
@@ -379,7 +379,7 @@ extension SettingsView {
                     settingsRow(
                         icon: "banknote.fill",
                         iconColor: Color.theme.green,
-                        title: "Simulated Cash Wallet",
+                        title: "Wallet Fund",
                         subtitle: "Deposit, withdraw & test capital",
                         trailingContent: AnyView(
                             HStack(spacing: 6) {
@@ -478,7 +478,7 @@ extension SettingsView {
                     trailingContent: AnyView(
                         Toggle("", isOn: $hapticsEnabled)
                             .labelsHidden()
-                            .tint(Color.theme.accent)
+                            .tint(Color.green)
                     )
                 )
                 
@@ -493,7 +493,7 @@ extension SettingsView {
                     trailingContent: AnyView(
                         Toggle("", isOn: $compactNumbers)
                             .labelsHidden()
-                            .tint(Color.theme.accent)
+                            .tint(Color.green)
                     )
                 )
                 
@@ -508,7 +508,7 @@ extension SettingsView {
                     trailingContent: AnyView(
                         Toggle("", isOn: $autoRefreshEnabled)
                             .labelsHidden()
-                            .tint(Color.theme.accent)
+                            .tint(Color.green)
                     )
                 )
                 
@@ -678,12 +678,16 @@ extension SettingsView {
                             Text("CoinGecko Web")
                                 .font(.caption)
                                 .fontWeight(.semibold)
-                            Spacer()
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.75)
+                                
+                            Spacer(minLength: 2)
                             Image(systemName: "arrow.up.right")
                                 .font(.caption2)
                         }
                         .padding(.horizontal, 12)
                         .padding(.vertical, 10)
+                        .frame(maxWidth: .infinity)
                         .background(Color.theme.secondaryText.opacity(0.08))
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                         .foregroundStyle(Color.theme.accent)
@@ -696,12 +700,15 @@ extension SettingsView {
                             Text("API Docs")
                                 .font(.caption)
                                 .fontWeight(.semibold)
-                            Spacer()
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.75)
+                            Spacer(minLength: 2)
                             Image(systemName: "arrow.up.right")
                                 .font(.caption2)
                         }
                         .padding(.horizontal, 12)
                         .padding(.vertical, 10)
+                        .frame(maxWidth: .infinity)
                         .background(Color.theme.secondaryText.opacity(0.08))
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                         .foregroundStyle(Color.theme.accent)
