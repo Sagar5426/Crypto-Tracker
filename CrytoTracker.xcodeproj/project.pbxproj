@@ -26,7 +26,6 @@
 		459ED35930A8B9E900116335 /* MarketStatsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 459ED31330A8B9E900116335 /* MarketStatsView.swift */; };
 		459ED35A30A8B9E900116335 /* MarketView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 459ED31430A8B9E900116335 /* MarketView.swift */; };
 		459ED35B30A8B9E900116335 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 459ED31530A8B9E900116335 /* MainTabView.swift */; };
-		459ED35C30A8B9E900116335 /* PortfolioScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 459ED31630A8B9E900116335 /* PortfolioScreen.swift */; };
 		459ED35D30A8B9E900116335 /* PortfolioSummaryCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 459ED31730A8B9E900116335 /* PortfolioSummaryCard.swift */; };
 		459ED35E30A8B9E900116335 /* PortfolioView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 459ED31830A8B9E900116335 /* PortfolioView.swift */; };
 		459ED35F30A8B9E900116335 /* WatchlistView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 459ED31930A8B9E900116335 /* WatchlistView.swift */; };
@@ -70,6 +69,7 @@
 		459ED39230AB056F00116335 /* CoinTradeRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 459ED39130AB056F00116335 /* CoinTradeRowView.swift */; };
 		459ED39530AB17FB00116335 /* SummaryMetricCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 459ED39430AB17FB00116335 /* SummaryMetricCardView.swift */; };
 		459ED39B30AB836900116335 /* TradeBookView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 459ED39930AB836900116335 /* TradeBookView.swift */; };
+		459ED39D30AB8B0100116335 /* ManagePortfolioView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 459ED39C30AB8B0100116335 /* ManagePortfolioView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -90,7 +90,6 @@
 		459ED31330A8B9E900116335 /* MarketStatsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarketStatsView.swift; sourceTree = "<group>"; };
 		459ED31430A8B9E900116335 /* MarketView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarketView.swift; sourceTree = "<group>"; };
 		459ED31530A8B9E900116335 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
-		459ED31630A8B9E900116335 /* PortfolioScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PortfolioScreen.swift; sourceTree = "<group>"; };
 		459ED31730A8B9E900116335 /* PortfolioSummaryCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PortfolioSummaryCard.swift; sourceTree = "<group>"; };
 		459ED31830A8B9E900116335 /* PortfolioView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PortfolioView.swift; sourceTree = "<group>"; };
 		459ED31930A8B9E900116335 /* WatchlistView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchlistView.swift; sourceTree = "<group>"; };
@@ -135,6 +134,7 @@
 		459ED39130AB056F00116335 /* CoinTradeRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoinTradeRowView.swift; sourceTree = "<group>"; };
 		459ED39430AB17FB00116335 /* SummaryMetricCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SummaryMetricCardView.swift; sourceTree = "<group>"; };
 		459ED39930AB836900116335 /* TradeBookView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TradeBookView.swift; sourceTree = "<group>"; };
+		459ED39C30AB8B0100116335 /* ManagePortfolioView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManagePortfolioView.swift; sourceTree = "<group>"; };
 		45B438442E894416005778D8 /* CrytoTracker.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CrytoTracker.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -378,10 +378,10 @@
 		459ED37F30A8BA5700116335 /* Portfolio */ = {
 			isa = PBXGroup;
 			children = (
-				459ED31630A8B9E900116335 /* PortfolioScreen.swift */,
 				459ED38130A8C13900116335 /* PortfolioCoinRowView.swift */,
 				459ED31730A8B9E900116335 /* PortfolioSummaryCard.swift */,
 				459ED31830A8B9E900116335 /* PortfolioView.swift */,
+				459ED39C30AB8B0100116335 /* ManagePortfolioView.swift */,
 			);
 			path = Portfolio;
 			sourceTree = "<group>";
@@ -512,7 +512,6 @@
 				459ED35930A8B9E900116335 /* MarketStatsView.swift in Sources */,
 				459ED35A30A8B9E900116335 /* MarketView.swift in Sources */,
 				459ED35B30A8B9E900116335 /* MainTabView.swift in Sources */,
-				459ED35C30A8B9E900116335 /* PortfolioScreen.swift in Sources */,
 				459ED38C30A9FF9600116335 /* CoinInvestmentCardSection.swift in Sources */,
 				459ED35D30A8B9E900116335 /* PortfolioSummaryCard.swift in Sources */,
 				459ED35E30A8B9E900116335 /* PortfolioView.swift in Sources */,
@@ -549,6 +548,7 @@
 				459ED37A30A8B9E900116335 /* LocalFileManager.swift in Sources */,
 				459ED37B30A8B9E900116335 /* NetworkingManager.swift in Sources */,
 				459ED37C30A8B9E900116335 /* ContentView.swift in Sources */,
+				459ED39D30AB8B0100116335 /* ManagePortfolioView.swift in Sources */,
 				459ED37D30A8B9E900116335 /* CrytoTrackerApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

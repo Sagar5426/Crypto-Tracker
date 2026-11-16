@@ -92,9 +92,10 @@ struct CoinDetailView: View {
             }
         }
         .sheet(isPresented: $showPortfolioSheet) {
-            PortfolioView(selectedCoin: vm.coin, initialTradeType: tradeTypeToOpen)
+            ManagePortfolioView(selectedCoin: vm.coin, initialTradeType: tradeTypeToOpen)
                 .environmentObject(homeVM)
         }
+
     }
 }
 

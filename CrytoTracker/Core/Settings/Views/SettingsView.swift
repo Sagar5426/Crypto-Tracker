@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import SwiftfulUI
 
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
@@ -25,7 +26,8 @@ struct SettingsView: View {
     @State private var toastMessage: String? = nil
     @State private var showProfitAndLossView: Bool = false
     @State private var showTradeBookView: Bool = false
-    @State private var isSpinning: Bool = false
+    @State private var scrollViewOffset: CGFloat = 0
+    @State private var fullHeaderSize: CGSize = .zero
     
     private let coingeckoURL = URL(string: "https://www.coingecko.com")!
     private let coingeckoApiURL = URL(string: "https://www.coingecko.com/en/api")!
@@ -47,6 +49,18 @@ struct SettingsView: View {
         vm.realizedPnLSummary.totalRealizedPnL + vm.portfolioTotalProfitLoss
     }
     
+    // MARK: - Layout & Header Fade Progress
+    
+    /// Header blur backdrop opacity eases in smoothly as user scrolls past 30pt
+    private var headerBackgroundOpacity: Double {
+        min(1.0, max(0.0, -scrollViewOffset / 30.0))
+    }
+    
+    /// Content fade opacity for the ambient glow
+    private var contentFadeOpacity: Double {
+        max(0.0, 1.0 - min(1.0, max(0.0, -scrollViewOffset / 200.0)))
+    }
+    
     // MARK: - Body
     
     var body: some View {
@@ -58,38 +72,11 @@ struct SettingsView: View {
                 
                 ambientGlowLayer
                 
-                ScrollView {
-                    VStack(spacing: 22) {
-                        // Top Header Bar
-                        topHeaderBar
-                        
-                        // Hero Fintech App / Profile Card
-                        heroProfileCard
-                        
-                        // Section 1: Financial & Trading Operations
-                        financialTradingSection
-                        
-                        // Section 2: Preferences & Interface
-                        preferencesSection
-                        
-                        // Section 3: Data & Local Storage
-                        storageDataSection
-                        
-                        // Section 4: Market Data Ecosystem
-                        marketDataSection
-                        
-                        // Section 5: Security & Privacy
-                        securityPrivacySection
-                        
-                        // Section 6: Legal & App Info
-                        legalAppInfoSection
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 36)
-                }
-                .refreshable {
-                    vm.reloadData()
-                }
+                // Scrollable content that scrolls through and underneath the sticky header
+                scrollViewLayer
+                
+                // Sticky Header View with blur backdrop (pinned at top)
+                stickyHeaderView
                 
                 // Floating Toast Banner
                 if let message = toastMessage {
@@ -134,7 +121,7 @@ struct SettingsView: View {
     }
 }
 
-// MARK: - Ambient Background & Top Bar
+// MARK: - Ambient Background, Top Bar & Main Scroll Content
 extension SettingsView {
     
     private var ambientGlowLayer: some View {
@@ -160,74 +147,98 @@ extension SettingsView {
             )
         }
         .ignoresSafeArea(edges: .top)
-        .frame(height: 320)
+        .frame(height: 320 + max(0, scrollViewOffset))
+        .offset(y: min(0, scrollViewOffset))
+        .opacity(contentFadeOpacity)
         .allowsHitTesting(false)
     }
     
-    private var topHeaderBar: some View {
-        HStack(alignment: .center) {
-            // Title + Pro Badge
-            HStack(spacing: 8) {
-                Text("Settings")
-                    .font(.system(size: 32, weight: .bold, design: .rounded))
-                    .foregroundStyle(Color.theme.accent)
-                
-                Text("PRO")
-                    .font(.system(size: 10, weight: .black))
-                    .foregroundStyle(Color.theme.background)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2.5)
-                    .background(Color.theme.accent)
-                    .clipShape(Capsule())
+    // MARK: - Sticky Top Header Bar (Using HeaderView with Blur Backdrop)
+    private var stickyHeaderView: some View {
+        HeaderView(
+            title: "Settings",
+            isLoading: vm.isLoading,
+            showProBadge: true,
+            showSearchButton: false,
+            showsDismissButton: showsDismissButton,
+            onRefresh: {
+                vm.reloadData()
+                showToast("Market data synced!")
+            },
+            onDismiss: {
+                dismiss()
             }
-            
-            Spacer()
-            
-            // Trailing Actions: Dismiss (if modal) & Reload
-            HStack(spacing: 12) {
-                Button {
-                    HapticManager.notification(type: .success)
-                    withAnimation(.easeInOut(duration: 0.6)) {
-                        isSpinning.toggle()
-                    }
-                    vm.reloadData()
-                    showToast("Market data synced!")
-                } label: {
-                    Image(systemName: "arrow.clockwise")
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(Color.theme.accent)
-                        .rotationEffect(.degrees(vm.isLoading || isSpinning ? 360 : 0))
-                        .animation(
-                            vm.isLoading ? .linear(duration: 1).repeatForever(autoreverses: false) : .default,
-                            value: vm.isLoading
-                        )
-                        .frame(width: 38, height: 38)
-                        .background(
-                            Circle()
-                                .fill(Color.theme.secondaryText.opacity(0.1))
-                        )
-                }
-                .buttonStyle(.plain)
+        )
+        .padding(.bottom, 8)
+        .background(
+            ZStack {
+                Rectangle()
+                    .fill(Color.clear)
+                    .background(.ultraThinMaterial)
+                    .overlay(Color.black.opacity(0.35))
+                    .ignoresSafeArea(edges: .top)
                 
-                if showsDismissButton {
-                    Button {
-                        dismiss()
-                    } label: {
-                        Text("Close")
-                            .font(.system(size: 15, weight: .bold))
-                            .foregroundStyle(Color.theme.accent)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 8)
-                            .background(
-                                Capsule()
-                                    .fill(Color.theme.secondaryText.opacity(0.1))
-                            )
-                    }
-                    .buttonStyle(.plain)
+                // Subtle bottom separator line
+                VStack {
+                    Spacer()
+                    Rectangle()
+                        .fill(Color.theme.secondaryText.opacity(0.12))
+                        .frame(height: 0.5)
                 }
+            }
+            .opacity(headerBackgroundOpacity)
+        )
+        .animation(.smooth, value: scrollViewOffset)
+        .readingFrame { frame in
+            if abs(fullHeaderSize.height - frame.size.height) > 1 && frame.size.height > 0 {
+                fullHeaderSize = frame.size
             }
         }
-        .padding(.top, 4)
+    }
+    
+    // MARK: - Main Scroll Layer
+    private var scrollViewLayer: some View {
+        ScrollViewWithOnScrollChanged(
+            .vertical,
+            showsIndicators: false,
+            content: {
+                VStack(spacing: 22) {
+                    // Spacer equal to header height so content begins directly below sticky header
+                    Rectangle()
+                        .opacity(0)
+                        .frame(height: max(50, fullHeaderSize.height))
+                    
+                    // Hero Fintech App / Profile Card
+                    heroProfileCard
+                    
+                    // Section 1: Financial & Trading Operations
+                    financialTradingSection
+                    
+                    // Section 2: Preferences & Interface
+                    preferencesSection
+                    
+                    // Section 3: Data & Local Storage
+                    storageDataSection
+                    
+                    // Section 4: Market Data Ecosystem
+                    marketDataSection
+                    
+                    // Section 5: Security & Privacy
+                    securityPrivacySection
+                    
+                    // Section 6: Legal & App Info
+                    legalAppInfoSection
+                }
+                .padding(.horizontal, 16)
+                .padding(.bottom, 36)
+            },
+            onScrollChanged: { offset in
+                scrollViewOffset = min(0, offset.y)
+            }
+        )
+        .refreshable {
+            vm.reloadData()
+        }
     }
 }
 

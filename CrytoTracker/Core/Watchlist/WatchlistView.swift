@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import SwiftfulUI
 
 struct WatchlistView: View {
     @EnvironmentObject private var vm: MarketViewModel
@@ -16,6 +17,8 @@ struct WatchlistView: View {
     @State private var viewMode: WatchlistViewMode = .list
     @State private var filterCategory: WatchlistFilterCategory = .all
     @State private var sortOption: WatchlistSortOption = .rank
+    @State private var scrollViewOffset: CGFloat = 0
+    @State private var topSectionHeight: CGFloat = 160
     
     enum WatchlistViewMode: String {
         case list, grid
@@ -119,56 +122,26 @@ struct WatchlistView: View {
                 
                 ambientGlowLayer
                 
-                ScrollView {
-                    VStack(spacing: 16) {
-                        // Header with Add Button
-                        HeaderView(
-                            title: "Watchlist",
-                            showSearchBar: $showSearchBar,
-                            searchText: $searchText,
-                            isLoading: vm.isLoading,
-                            onRefresh: {
-                                vm.reloadData()
-                            },
-                            onAdd: {
-                                showAddCoinSheet = true
-                            }
+                VStack(spacing: 0) {
+                    // Header kept intact at the top
+                    topBar
+                        .background(
+                            Color.black
+                                .ignoresSafeArea(edges: .top)
+                                .opacity(headerBackgroundOpacity)
                         )
-                        
-                        if !vm.watchlistCoins.isEmpty {
-                            // Watchlist Pulse Summary Card (when not searching)
-                            if searchText.isEmpty {
-                                watchlistPulseCard
-                                    .padding(.horizontal)
-                                    .transition(.opacity.combined(with: .scale(scale: 0.98)))
-                            }
-                            
-                            // Filter Pills & View Mode Bar
-                            filterAndControlsBar
-                                .padding(.horizontal)
-                            
-                            // Watchlist Content
-                            if filteredAndSortedWatchlist.isEmpty && !searchText.isEmpty {
-                                noResultsView
-                            } else if filteredAndSortedWatchlist.isEmpty {
-                                noCategoryMatchesView
-                            } else {
-                                if viewMode == .list {
-                                    columnTitles
-                                    coinsListView
-                                } else {
-                                    coinsGridView
-                                }
-                            }
-                        } else {
+                    
+                    if vm.watchlistCoins.isEmpty {
+                        ScrollView {
                             emptyWatchlistView
                                 .padding(.top, 20)
                         }
+                        .refreshable {
+                            vm.reloadData()
+                        }
+                    } else {
+                        scrollViewLayer
                     }
-                    .padding(.bottom, 32)
-                }
-                .refreshable {
-                    vm.reloadData()
                 }
             }
             .toolbar(.hidden, for: .navigationBar)
@@ -185,7 +158,40 @@ struct WatchlistView: View {
     }
 }
 
-// MARK: - Layout & Ambient Layer
+// MARK: - Layout & Staged Fade Progress
+extension WatchlistView {
+    
+    /// Progress from 0.0 (fully expanded at top) to 1.0 (fully collapsed and pinned)
+    private var collapseProgress: Double {
+        if !searchText.isEmpty { return 1.0 }
+        guard scrollViewOffset < 0 else { return 0.0 }
+        let collapseDistance = max(1.0, topSectionHeight - 10)
+        return min(1.0, Double(-scrollViewOffset / collapseDistance))
+    }
+    
+    /// Header background opacity turns solid as user scrolls past 30pt
+    private var headerBackgroundOpacity: Double {
+        min(1.0, max(0.0, -scrollViewOffset / 30.0))
+    }
+    
+    /// Watchlist Pulse Card fades out smoothly (0% -> 65% of collapse)
+    private var pulseCardFadeOpacity: Double {
+        let progress = min(1.0, max(0.0, collapseProgress / 0.65))
+        return 1.0 - progress
+    }
+    
+    /// Overall opacity for ambient background gradient
+    private var contentFadeOpacity: Double {
+        max(0.0, 1.0 - collapseProgress)
+    }
+    
+    /// Solid background opacity for the sticky filter bar row itself (reaches 1.0 before pinning)
+    private var filterBarBackgroundOpacity: Double {
+        min(1.0, max(0.0, collapseProgress / 0.85))
+    }
+}
+
+// MARK: - Ambient, Top Bar & Collapsible Pulse Section
 extension WatchlistView {
     
     private var ambientGlowLayer: some View {
@@ -211,8 +217,51 @@ extension WatchlistView {
             )
         }
         .ignoresSafeArea(edges: .top)
-        .frame(height: 340)
+        .frame(height: 340 + max(0, scrollViewOffset))
+        .offset(y: min(0, scrollViewOffset))
+        .opacity(contentFadeOpacity)
         .allowsHitTesting(false)
+    }
+    
+    /// Header bar kept intact at the top of Watchlist
+    private var topBar: some View {
+        HeaderView(
+            title: "Watchlist",
+            showSearchBar: $showSearchBar,
+            searchText: $searchText,
+            isLoading: vm.isLoading,
+            onRefresh: {
+                vm.reloadData()
+            },
+            onAdd: {
+                showAddCoinSheet = true
+            }
+        )
+        .padding(.bottom, 6)
+    }
+    
+    /// Collapsible Watchlist Pulse Section that fades and disappears while scrolling
+    private var collapsiblePulseSection: some View {
+        watchlistPulseCard
+            .padding(.horizontal)
+            .opacity(pulseCardFadeOpacity)
+            .scaleEffect(1.0 - (collapseProgress * 0.03), anchor: .top)
+            .background(
+                GeometryReader { geo in
+                    Color.clear
+                        .onAppear {
+                            if geo.size.height > 0 {
+                                topSectionHeight = geo.size.height + 12
+                            }
+                        }
+                        .onChange(of: geo.size.height) { _, newHeight in
+                            if newHeight > 0 {
+                                topSectionHeight = newHeight + 12
+                            }
+                        }
+                }
+            )
+            .allowsHitTesting(collapseProgress < 0.85)
     }
 }
 
@@ -396,6 +445,26 @@ extension WatchlistView {
 // MARK: - Filters, Controls & Column Titles
 extension WatchlistView {
     
+    // MARK: - Sticky Filter & Controls Bar
+    private var stickyFilterBar: some View {
+        VStack(spacing: 0) {
+            filterAndControlsBar
+                .padding(.horizontal)
+                .padding(.top, 4)
+                .padding(.bottom, 8)
+            
+            // Divider line below filter bar when sticky
+            Rectangle()
+                .fill(Color.theme.secondaryText.opacity(0.18))
+                .frame(height: 1)
+                .opacity(filterBarBackgroundOpacity)
+        }
+        .background(
+            Color.black
+                .opacity(filterBarBackgroundOpacity)
+        )
+    }
+    
     private var filterAndControlsBar: some View {
         HStack(spacing: 8) {
             // Filter Pills (All / Gainers / Losers)
@@ -498,6 +567,61 @@ extension WatchlistView {
         .foregroundStyle(Color.theme.secondaryText)
         .padding(.horizontal, 28)
         .padding(.vertical, 2)
+    }
+}
+
+// MARK: - Main Scroll Content
+extension WatchlistView {
+    
+    private var scrollViewLayer: some View {
+        ScrollViewWithOnScrollChanged(
+            .vertical,
+            showsIndicators: false,
+            content: {
+                LazyVStack(spacing: 12, pinnedViews: [.sectionHeaders]) {
+                    // Watchlist Pulse Summary Card (collapsible and disappears while scrolling)
+                    if searchText.isEmpty {
+                        collapsiblePulseSection
+                            .zIndex(1)
+                    }
+                    
+                    // Sticky Section: Filter & Controls Bar sticks intact when scrolled
+                    Section {
+                        // Watchlist Content
+                        if filteredAndSortedWatchlist.isEmpty && !searchText.isEmpty {
+                            noResultsView
+                                .zIndex(0)
+                        } else if filteredAndSortedWatchlist.isEmpty {
+                            noCategoryMatchesView
+                                .zIndex(0)
+                        } else {
+                            if viewMode == .list {
+                                columnTitles
+                                    .zIndex(0)
+                                coinsListView
+                                    .zIndex(0)
+                            } else {
+                                coinsGridView
+                                    .zIndex(0)
+                            }
+                        }
+                    } header: {
+                        stickyFilterBar
+                            .zIndex(10)
+                    }
+                }
+                .padding(.top, 4)
+                .padding(.bottom, 32)
+            },
+            onScrollChanged: { offset in
+                scrollViewOffset = offset.y
+            }
+        )
+        .clipped()
+        .scrollDismissesKeyboard(.interactively)
+        .refreshable {
+            vm.reloadData()
+        }
     }
 }
 

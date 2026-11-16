@@ -28,7 +28,7 @@ struct MainTabView: View {
                 }
                 .tag(AppTab.markets)
             
-            PortfolioScreen()
+            PortfolioView()
                 .tabItem {
                     Label("Portfolio", systemImage: "briefcase.fill")
                 }
