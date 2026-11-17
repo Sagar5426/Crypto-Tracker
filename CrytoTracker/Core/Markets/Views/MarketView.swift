@@ -8,15 +8,25 @@
 import SwiftUI
 import SwiftfulUI
 
+@MainActor
 struct MarketView: View {
     
     @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject private var vm: MarketViewModel
-    @State private var showSearchBar: Bool = false
-    @State private var selectedCoinForDetail: CoinModel? = nil
+    
+    // MARK: - View Model
+    @StateObject private var viewModel: MarketScreenViewModel
+    
+    // MARK: - Layout State
     @State private var scrollViewOffset: CGFloat = 0
     @State private var topSafeAreaInset: CGFloat = 59
     @State private var topSectionHeight: CGFloat = 160
+    
+    // MARK: - Initializer
+    
+    init(viewModel: MarketScreenViewModel? = nil) {
+        self._viewModel = StateObject(wrappedValue: viewModel ?? MarketScreenViewModel())
+    }
     
     var body: some View {
         NavigationStack {
@@ -48,7 +58,10 @@ struct MarketView: View {
                 }
             )
             .toolbar(.hidden, for: .navigationBar)
-            .fullScreenCover(item: $selectedCoinForDetail) { coin in
+            .onAppear {
+                viewModel.setMarketViewModel(vm)
+            }
+            .fullScreenCover(item: $viewModel.selectedCoinForDetail) { coin in
                 NavigationStack {
                     CoinDetailView(coin: coin)
                 }
@@ -147,12 +160,12 @@ extension MarketView {
             // 1. Collapsible Top Header
             HeaderView(
                 title: "Markets",
-                showSearchBar: $showSearchBar,
-                searchText: $vm.searchText,
-                isLoading: vm.isLoading,
+                showSearchBar: $viewModel.showSearchBar,
+                searchText: $viewModel.searchText,
+                isLoading: viewModel.isLoading,
                 showLiveBadge: true,
                 onRefresh: {
-                    vm.reloadData()
+                    viewModel.reloadData()
                 }
             )
             .opacity(headerFadeOpacity)
@@ -193,8 +206,8 @@ extension MarketView {
                         .zIndex(1)
                     
                     // Search Bar Dropdown (when toggled from header)
-                    if showSearchBar {
-                        SearchBarView(searchText: $vm.searchText)
+                    if viewModel.showSearchBar {
+                        SearchBarView(searchText: $viewModel.searchText)
                             .transition(.move(edge: .top).combined(with: .opacity))
                             .zIndex(1)
                     }
@@ -202,23 +215,23 @@ extension MarketView {
                     // Sticky Filter Chips & Content
                     Section {
                         // Top Movers & Losers (Only shown in "All" category when not searching)
-                        if vm.marketCategory == .all && vm.searchText.isEmpty {
+                        if viewModel.marketCategory == .all && viewModel.searchText.isEmpty {
                             VStack(spacing: 10) {
-                                if !vm.topMovers.isEmpty {
+                                if !viewModel.topMovers.isEmpty {
                                     topMoversSection
                                         .transition(.opacity.combined(with: .scale(scale: 0.98, anchor: .top)))
                                 }
                                 
-                                if !vm.topLosers.isEmpty {
+                                if !viewModel.topLosers.isEmpty {
                                     topLosersSection
                                         .transition(.opacity.combined(with: .scale(scale: 0.98, anchor: .top)))
                                 }
                             }
                             .padding(.top, 4)
                             .padding(.bottom, 2)
-                        } else if vm.searchText.isEmpty {
+                        } else if viewModel.searchText.isEmpty {
                             // Category Banner for Gainers / Losers / Top 10
-                            if let desc = vm.marketCategory.description {
+                            if let desc = viewModel.marketCategory.description {
                                 HStack(spacing: 6) {
                                     Image(systemName: "info.circle.fill")
                                         .font(.caption2)
@@ -239,7 +252,7 @@ extension MarketView {
                             .zIndex(0)
                         
                         // Coins List
-                        if vm.displayedCoins.isEmpty && !vm.searchText.isEmpty {
+                        if viewModel.displayedCoins.isEmpty && !viewModel.searchText.isEmpty {
                             noResultsView
                                 .zIndex(0)
                         } else {
@@ -258,7 +271,7 @@ extension MarketView {
             }
         )
         .refreshable {
-            vm.reloadData()
+            viewModel.reloadData()
         }
     }
     
@@ -268,12 +281,9 @@ extension MarketView {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
                     ForEach(MarketViewModel.MarketCategory.allCases) { category in
-                        let isSelected = vm.marketCategory == category
+                        let isSelected = viewModel.marketCategory == category
                         Button {
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
-                                vm.marketCategory = category
-                            }
-                            HapticManager.notification(type: .success)
+                            viewModel.selectCategory(category)
                         } label: {
                             HStack(spacing: 6) {
                                 if category == .gainers {
@@ -357,9 +367,9 @@ extension MarketView {
             
             ScrollView(.horizontal, showsIndicators: false) {
                 LazyHStack(spacing: 10) {
-                    ForEach(vm.topMovers) { coin in
+                    ForEach(viewModel.topMovers) { coin in
                         Button {
-                            selectedCoinForDetail = coin
+                            viewModel.selectCoinForDetail(coin)
                         } label: {
                             topMoverCard(coin: coin)
                         }
@@ -435,9 +445,9 @@ extension MarketView {
             
             ScrollView(.horizontal, showsIndicators: false) {
                 LazyHStack(spacing: 10) {
-                    ForEach(vm.topLosers) { coin in
+                    ForEach(viewModel.topLosers) { coin in
                         Button {
-                            selectedCoinForDetail = coin
+                            viewModel.selectCoinForDetail(coin)
                         } label: {
                             topLoserCard(coin: coin)
                         }
@@ -505,15 +515,13 @@ extension MarketView {
                     .lineLimit(1)
                 Image(systemName: "chevron.down")
                     .font(.system(size: 8, weight: .bold))
-                    .opacity((vm.sortOption == .rank || vm.sortOption == .rankReversed) ? 1.0 : 0.0)
-                    .rotationEffect(Angle(degrees: vm.sortOption == .rank ? 0 : 180))
+                    .opacity((viewModel.sortOption == .rank || viewModel.sortOption == .rankReversed) ? 1.0 : 0.0)
+                    .rotationEffect(Angle(degrees: viewModel.sortOption == .rank ? 0 : 180))
             }
             .fixedSize()
             .contentShape(Rectangle())
             .onTapGesture {
-                withAnimation(.default) {
-                    vm.sortOption = vm.sortOption == .rank ? .rankReversed : .rank
-                }
+                viewModel.toggleRankSort()
             }
             
             Text("Coin")
@@ -532,15 +540,13 @@ extension MarketView {
                     .lineLimit(1)
                 Image(systemName: "chevron.down")
                     .font(.system(size: 8, weight: .bold))
-                    .opacity((vm.sortOption == .price || vm.sortOption == .priceReversed) ? 1.0 : 0.0)
-                    .rotationEffect(Angle(degrees: vm.sortOption == .price ? 0 : 180))
+                    .opacity((viewModel.sortOption == .price || viewModel.sortOption == .priceReversed) ? 1.0 : 0.0)
+                    .rotationEffect(Angle(degrees: viewModel.sortOption == .price ? 0 : 180))
             }
             .frame(width: 88, alignment: .trailing)
             .contentShape(Rectangle())
             .onTapGesture {
-                withAnimation(.default) {
-                    vm.sortOption = vm.sortOption == .price ? .priceReversed : .price
-                }
+                viewModel.togglePriceSort()
             }
         }
         .font(.caption)
@@ -552,17 +558,15 @@ extension MarketView {
     
     private var coinsLazyList: some View {
         LazyVStack(spacing: 8) {
-            ForEach(vm.displayedCoins) { coin in
+            ForEach(viewModel.displayedCoins) { coin in
                 Button {
-                    selectedCoinForDetail = coin
+                    viewModel.selectCoinForDetail(coin)
                 } label: {
                     CoinRowView(
                         coin: coin,
-                        isFavorite: vm.isWatchlisted(coin: coin),
+                        isFavorite: viewModel.isWatchlisted(coin: coin),
                         onFavoriteTapped: {
-                            withAnimation {
-                                vm.toggleWatchlist(coin: coin)
-                            }
+                            viewModel.toggleWatchlist(coin: coin)
                         }
                     )
                     .padding(.horizontal, 12)
@@ -581,11 +585,11 @@ extension MarketView {
                 .padding(.horizontal)
                 .contextMenu {
                     Button {
-                        vm.toggleWatchlist(coin: coin)
+                        viewModel.toggleWatchlist(coin: coin)
                     } label: {
                         Label(
-                            vm.isWatchlisted(coin: coin) ? "Remove from Watchlist" : "Add to Watchlist",
-                            systemImage: vm.isWatchlisted(coin: coin) ? "star.slash" : "star"
+                            viewModel.isWatchlisted(coin: coin) ? "Remove from Watchlist" : "Add to Watchlist",
+                            systemImage: viewModel.isWatchlisted(coin: coin) ? "star.slash" : "star"
                         )
                     }
                 }
@@ -600,7 +604,7 @@ extension MarketView {
                 .foregroundStyle(Color.theme.secondaryText)
                 .padding(.top, 40)
             
-            Text("No results for \"\(vm.searchText)\"")
+            Text("No results for \"\(viewModel.searchText)\"")
                 .font(.headline)
                 .foregroundStyle(Color.theme.accent)
             

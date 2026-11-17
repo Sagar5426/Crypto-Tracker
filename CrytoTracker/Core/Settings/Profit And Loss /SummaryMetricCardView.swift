@@ -2,50 +2,78 @@ import SwiftUI
 
 struct SummaryMetricCardView: View {
     @EnvironmentObject private var vm: MarketViewModel
+    var viewModel: ProfitAndLossViewModel? = nil
     
     var totalCryptoVolumeOverride: Double? = nil
     var totalBuyCountOverride: Int? = nil
     var totalSellCountOverride: Int? = nil
     
-    init(totalCryptoVolume: Double? = nil, totalBuyCount: Int? = nil, totalSellCount: Int? = nil) {
+    init(
+        viewModel: ProfitAndLossViewModel? = nil,
+        totalCryptoVolume: Double? = nil,
+        totalBuyCount: Int? = nil,
+        totalSellCount: Int? = nil
+    ) {
+        self.viewModel = viewModel
         self.totalCryptoVolumeOverride = totalCryptoVolume
         self.totalBuyCountOverride = totalBuyCount
         self.totalSellCountOverride = totalSellCount
     }
     
     private var cryptoTransactions: [TransactionEntity] {
-        vm.transactions.filter {
+        if let viewModel = viewModel {
+            return viewModel.cryptoTransactions
+        }
+        return vm.transactions.filter {
             let type = ($0.transactionType ?? "").uppercased()
             return ($0.coinID ?? "") != "usd-cash" && (type == "BUY" || type == "SELL")
         }
     }
     
     private var totalCryptoVolume: Double {
-        totalCryptoVolumeOverride ?? cryptoTransactions
+        if let override = totalCryptoVolumeOverride {
+            return override
+        }
+        if let viewModel = viewModel {
+            return viewModel.totalCryptoVolume
+        }
+        return cryptoTransactions
             .map { $0.totalValue }
             .reduce(0, +)
     }
     
     private var totalBuyCount: Int {
-        totalBuyCountOverride ?? cryptoTransactions.filter { ($0.transactionType ?? "").uppercased() == "BUY" }.count
+        if let override = totalBuyCountOverride {
+            return override
+        }
+        if let viewModel = viewModel {
+            return viewModel.totalBuyCount
+        }
+        return cryptoTransactions.filter { ($0.transactionType ?? "").uppercased() == "BUY" }.count
     }
     
     private var totalSellCount: Int {
-        totalSellCountOverride ?? cryptoTransactions.filter { ($0.transactionType ?? "").uppercased() == "SELL" }.count
+        if let override = totalSellCountOverride {
+            return override
+        }
+        if let viewModel = viewModel {
+            return viewModel.totalSellCount
+        }
+        return cryptoTransactions.filter { ($0.transactionType ?? "").uppercased() == "SELL" }.count
     }
     
     var body: some View {
-        let summary = vm.realizedPnLSummary
+        let summary = viewModel?.realizedPnLSummary ?? vm.realizedPnLSummary
         let realizedPnL = summary.totalRealizedPnL
-        let unrealizedPnL = vm.portfolioTotalProfitLoss
-        let openHoldingsCount = vm.portfolioCoins.filter { ($0.currentHoldings ?? 0) > 0 }.count
+        let unrealizedPnL = viewModel?.portfolioTotalProfitLoss ?? vm.portfolioTotalProfitLoss
+        let openHoldingsCount = viewModel?.openHoldingsCount ?? vm.portfolioCoins.filter { ($0.currentHoldings ?? 0) > 0 }.count
         
         let hasClosedTrades = summary.totalClosedTrades > 0
         let hasOpenPositions = openHoldingsCount > 0
         let hasAnyActivity = hasClosedTrades || hasOpenPositions
         
         let netPnL = realizedPnL + unrealizedPnL
-        let totalInvestedBasis = summary.totalCostBasis + vm.portfolioTotalInvested
+        let totalInvestedBasis = summary.totalCostBasis + (viewModel?.portfolioTotalInvested ?? vm.portfolioTotalInvested)
         let netPercentage = totalInvestedBasis > 0 ? (netPnL / totalInvestedBasis) * 100.0 : 0.0
         
         let isNetProfitable = netPnL >= 0
@@ -213,7 +241,8 @@ struct SummaryMetricCardView: View {
                             .minimumScaleFactor(0.8)
                         
                         if hasOpenPositions {
-                            Text("\(isUnrealizedProfitable ? "+" : "")\(vm.portfolioTotalProfitLossPercentage.asPercentString())")
+                            let unPct = viewModel?.portfolioTotalProfitLossPercentage ?? vm.portfolioTotalProfitLossPercentage
+                            Text("\(isUnrealizedProfitable ? "+" : "")\(unPct.asPercentString())")
                                 .font(.system(size: 11, weight: .semibold, design: .rounded))
                                 .foregroundStyle(unrealizedColor)
                                 .monospacedDigit()
@@ -233,7 +262,8 @@ struct SummaryMetricCardView: View {
                                 .font(.system(size: 10.5))
                                 .foregroundStyle(Color.theme.secondaryText)
                             Spacer()
-                            Text(vm.portfolioTotalValue.asCurrencyWith2Decimals())
+                            let portVal = viewModel?.portfolioTotalValue ?? vm.portfolioTotalValue
+                            Text(portVal.asCurrencyWith2Decimals())
                                 .font(.system(size: 10.5, weight: .semibold, design: .rounded))
                                 .foregroundStyle(Color.theme.accent)
                                 .monospacedDigit()
@@ -242,8 +272,10 @@ struct SummaryMetricCardView: View {
                         HStack {
                             Text("Invested")
                                 .font(.system(size: 10.5))
+                                .foregroundStyle(Color.theme.secondaryText)
                             Spacer()
-                            Text(vm.portfolioTotalInvested.asCurrencyWith2Decimals())
+                            let portInv = viewModel?.portfolioTotalInvested ?? vm.portfolioTotalInvested
+                            Text(portInv.asCurrencyWith2Decimals())
                                 .font(.system(size: 10.5, weight: .semibold, design: .rounded))
                                 .foregroundStyle(Color.theme.secondaryText)
                                 .monospacedDigit()

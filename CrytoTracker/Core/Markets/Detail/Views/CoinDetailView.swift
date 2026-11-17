@@ -8,6 +8,7 @@
 import SwiftUI
 
 // Wrapper to handle unwrapping @binding optional CoinModel
+@MainActor
 struct DetailLoadingView: View {
     @Binding var coin: CoinModel?
     
@@ -20,21 +21,19 @@ struct DetailLoadingView: View {
     }
 }
 
+@MainActor
 struct CoinDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var homeVM: MarketViewModel
-    @StateObject var vm: DetailViewModel
-    @State private var showFullDescription: Bool = false
-    @State private var showPortfolioSheet: Bool = false
-    @State private var tradeTypeToOpen: TransactionType = .buy
+    @StateObject private var vm: DetailViewModel
     
     private let columns: [GridItem] = [
         GridItem(.flexible(), spacing: 12),
         GridItem(.flexible(), spacing: 12)
     ]
     
-    init(coin: CoinModel) {
-        self._vm = StateObject(wrappedValue: DetailViewModel(coin: coin))
+    init(coin: CoinModel, viewModel: DetailViewModel? = nil) {
+        self._vm = StateObject(wrappedValue: viewModel ?? DetailViewModel(coin: coin))
     }
     
     var body: some View {
@@ -47,7 +46,7 @@ struct CoinDetailView: View {
                 chartCardSection
                 
                 // Personal Portfolio Holdings (with real data)
-                if userHasHoldings, let holding = userHoldingCoin {
+                if vm.userHasHoldings, let holding = vm.userHoldingCoin {
                     CoinInvestmentCardSection(coin: holding)
                 }
                 
@@ -91,38 +90,18 @@ struct CoinDetailView: View {
                     .frame(width: 30, height: 30)
             }
         }
-        .sheet(isPresented: $showPortfolioSheet) {
-            ManagePortfolioView(selectedCoin: vm.coin, initialTradeType: tradeTypeToOpen)
+        .onAppear {
+            vm.setMarketViewModel(homeVM)
+        }
+        .sheet(isPresented: $vm.showPortfolioSheet) {
+            ManagePortfolioView(selectedCoin: vm.coin, initialTradeType: vm.tradeTypeToOpen)
                 .environmentObject(homeVM)
         }
-
     }
 }
 
 // MARK: - Subviews & Sections
 extension CoinDetailView {
-    
-    private var isCoinWatchlisted: Bool {
-        homeVM.isWatchlisted(coin: vm.coin)
-    }
-    
-    private var userHasHoldings: Bool {
-        if let holding = homeVM.portfolioCoins.first(where: { $0.id == vm.coin.id }) {
-            return (holding.currentHoldings ?? 0) > 0
-        }
-        return false
-    }
-    
-    private var userHoldingCoin: CoinModel? {
-        homeVM.portfolioCoins.first(where: { $0.id == vm.coin.id })
-    }
-    
-    private var availableHoldingsSubtitle: String {
-        if let holding = userHoldingCoin, let qty = holding.currentHoldings, qty > 0 {
-            return "\(qty.asNumberString()) \(vm.coin.symbol.uppercased())"
-        }
-        return "Manage Position"
-    }
     
     // MARK: - Hero Header Card
     private var heroHeaderCard: some View {
@@ -158,13 +137,11 @@ extension CoinDetailView {
                 Spacer()
                 
                 Button {
-                    withAnimation {
-                        homeVM.toggleWatchlist(coin: vm.coin)
-                    }
+                    vm.toggleWatchlist()
                 } label: {
-                    Image(systemName: isCoinWatchlisted ? "star.fill" : "star")
+                    Image(systemName: vm.isWatchlisted ? "star.fill" : "star")
                         .font(.system(size: 18))
-                        .foregroundStyle(isCoinWatchlisted ? Color.yellow : Color.theme.secondaryText)
+                        .foregroundStyle(vm.isWatchlisted ? Color.yellow : Color.theme.secondaryText)
                         .padding(6)
                         .background(Color.theme.secondaryText.opacity(0.08))
                         .clipShape(Circle())
@@ -192,10 +169,7 @@ extension CoinDetailView {
     
     // MARK: - 24H High / Low Visual Bar
     private func priceRangeBar(low: Double, current: Double, high: Double) -> some View {
-        let range = max(high - low, 0.0001)
-        let progress = min(max(CGFloat((current - low) / range), 0), 1)
-        
-        return VStack(spacing: 6) {
+        VStack(spacing: 6) {
             HStack {
                 Text("24h Low: \(low.asFormattedPrice())")
                 Spacer()
@@ -226,7 +200,7 @@ extension CoinDetailView {
                         .fill(Color.white)
                         .frame(width: 12, height: 12)
                         .shadow(color: Color.black.opacity(0.3), radius: 2)
-                        .offset(x: max(0, min(geo.size.width * progress - 6, geo.size.width - 12)))
+                        .offset(x: max(0, min(geo.size.width * vm.priceRangeProgress - 6, geo.size.width - 12)))
                 }
             }
             .frame(height: 12)
@@ -344,19 +318,17 @@ extension CoinDetailView {
             
             VStack(alignment: .leading, spacing: 8) {
                 Text(description)
-                    .lineLimit(showFullDescription ? nil : 4)
+                    .lineLimit(vm.showFullDescription ? nil : 4)
                     .font(.subheadline)
                     .foregroundStyle(Color.theme.secondaryText)
                     .lineSpacing(3)
                 
                 Button {
-                    withAnimation(.easeInOut(duration: 0.25)) {
-                        showFullDescription.toggle()
-                    }
+                    vm.toggleDescription()
                 } label: {
                     HStack(spacing: 4) {
-                        Text(showFullDescription ? "Show Less" : "Read More")
-                        Image(systemName: showFullDescription ? "chevron.up" : "chevron.down")
+                        Text(vm.showFullDescription ? "Show Less" : "Read More")
+                        Image(systemName: vm.showFullDescription ? "chevron.up" : "chevron.down")
                     }
                     .font(.caption)
                     .fontWeight(.bold)
@@ -466,22 +438,18 @@ extension CoinDetailView {
                     baseColor: Color.theme.green.opacity(0.7),
                     isProminent: true
                 ) {
-                    tradeTypeToOpen = .buy
-                    showPortfolioSheet = true
-                    HapticManager.impact(style: .medium)
+                    vm.openTrade(type: .buy)
                 }
                 
                 // Secondary / Contextual Sell Action
                 tradeDockButton(
                     title: "Sell \(vm.coin.symbol.uppercased())",
-                    subtitle: availableHoldingsSubtitle,
+                    subtitle: vm.availableHoldingsSubtitle,
                     systemImage: "arrow.up.right",
                     baseColor: Color.theme.red.opacity(0.7),
-                    isProminent: userHasHoldings
+                    isProminent: vm.userHasHoldings
                 ) {
-                    tradeTypeToOpen = .sell
-                    showPortfolioSheet = true
-                    HapticManager.impact(style: .medium)
+                    vm.openTrade(type: .sell)
                 }
             }
             .padding(7)

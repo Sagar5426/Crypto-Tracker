@@ -70,6 +70,10 @@
 		459ED39530AB17FB00116335 /* SummaryMetricCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 459ED39430AB17FB00116335 /* SummaryMetricCardView.swift */; };
 		459ED39B30AB836900116335 /* TradeBookView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 459ED39930AB836900116335 /* TradeBookView.swift */; };
 		459ED39D30AB8B0100116335 /* ManagePortfolioView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 459ED39C30AB8B0100116335 /* ManagePortfolioView.swift */; };
+		459ED3A930ACEBC500116335 /* TradeBookViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 459ED3A830ACEBC500116335 /* TradeBookViewModel.swift */; };
+		459ED3B230ACEEE300116335 /* MarketScreenViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 459ED3B130ACEEE300116335 /* MarketScreenViewModel.swift */; };
+		459ED3B430ACEFF800116335 /* CoinInvestmentBreakdownViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 459ED3B330ACEFF800116335 /* CoinInvestmentBreakdownViewModel.swift */; };
+		459ED3B630ACF0D900116335 /* ChartViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 459ED3B530ACF0D900116335 /* ChartViewModel.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -135,8 +139,35 @@
 		459ED39430AB17FB00116335 /* SummaryMetricCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SummaryMetricCardView.swift; sourceTree = "<group>"; };
 		459ED39930AB836900116335 /* TradeBookView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TradeBookView.swift; sourceTree = "<group>"; };
 		459ED39C30AB8B0100116335 /* ManagePortfolioView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManagePortfolioView.swift; sourceTree = "<group>"; };
+		459ED3A830ACEBC500116335 /* TradeBookViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TradeBookViewModel.swift; sourceTree = "<group>"; };
+		459ED3B130ACEEE300116335 /* MarketScreenViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarketScreenViewModel.swift; sourceTree = "<group>"; };
+		459ED3B330ACEFF800116335 /* CoinInvestmentBreakdownViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoinInvestmentBreakdownViewModel.swift; sourceTree = "<group>"; };
+		459ED3B530ACF0D900116335 /* ChartViewModel.swift */ = {isa = PBXFileReference; path = ChartViewModel.swift; sourceTree = "<group>"; };
 		45B438442E894416005778D8 /* CrytoTracker.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CrytoTracker.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		459ED39E30ACE6C500116335 /* ViewModels */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = ViewModels;
+			sourceTree = "<group>";
+		};
+		459ED3A130ACE9CD00116335 /* ViewModels */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = ViewModels;
+			sourceTree = "<group>";
+		};
+		459ED3A430ACEAEE00116335 /* ViewModels */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = ViewModels;
+			sourceTree = "<group>";
+		};
+		459ED3AA30ACECA600116335 /* ViewModels */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = ViewModels;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		4579C5922E3A1ED200C447A9 /* Frameworks */ = {
@@ -196,6 +227,8 @@
 			isa = PBXGroup;
 			children = (
 				459ED30930A8B9E900116335 /* DetailViewModel.swift */,
+				459ED3B330ACEFF800116335 /* CoinInvestmentBreakdownViewModel.swift */,
+				459ED3B530ACF0D900116335 /* ChartViewModel.swift */,
 			);
 			path = ViewModels;
 			sourceTree = "<group>";
@@ -226,6 +259,7 @@
 			isa = PBXGroup;
 			children = (
 				459ED31030A8B9E900116335 /* MarketViewModel.swift */,
+				459ED3B130ACEEE300116335 /* MarketScreenViewModel.swift */,
 			);
 			path = ViewModels;
 			sourceTree = "<group>";
@@ -279,6 +313,7 @@
 				459ED39330AB16FB00116335 /* Profit And Loss  */,
 				459ED32330A8B9E900116335 /* Views */,
 				459ED39A30AB836900116335 /* TradeBook */,
+				459ED3AA30ACECA600116335 /* ViewModels */,
 			);
 			path = Settings;
 			sourceTree = "<group>";
@@ -382,6 +417,7 @@
 				459ED31730A8B9E900116335 /* PortfolioSummaryCard.swift */,
 				459ED31830A8B9E900116335 /* PortfolioView.swift */,
 				459ED39C30AB8B0100116335 /* ManagePortfolioView.swift */,
+				459ED39E30ACE6C500116335 /* ViewModels */,
 			);
 			path = Portfolio;
 			sourceTree = "<group>";
@@ -390,6 +426,7 @@
 			isa = PBXGroup;
 			children = (
 				459ED31930A8B9E900116335 /* WatchlistView.swift */,
+				459ED3A130ACE9CD00116335 /* ViewModels */,
 			);
 			path = Watchlist;
 			sourceTree = "<group>";
@@ -400,6 +437,7 @@
 				459ED32230A8B9E900116335 /* ProfitAndLossView.swift */,
 				459ED39130AB056F00116335 /* CoinTradeRowView.swift */,
 				459ED39430AB17FB00116335 /* SummaryMetricCardView.swift */,
+				459ED3A430ACEAEE00116335 /* ViewModels */,
 			);
 			path = "Profit And Loss ";
 			sourceTree = "<group>";
@@ -408,6 +446,7 @@
 			isa = PBXGroup;
 			children = (
 				459ED39930AB836900116335 /* TradeBookView.swift */,
+				459ED3A830ACEBC500116335 /* TradeBookViewModel.swift */,
 			);
 			path = TradeBook;
 			sourceTree = "<group>";
@@ -426,6 +465,12 @@
 			buildRules = (
 			);
 			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				459ED39E30ACE6C500116335 /* ViewModels */,
+				459ED3A130ACE9CD00116335 /* ViewModels */,
+				459ED3A430ACEAEE00116335 /* ViewModels */,
+				459ED3AA30ACECA600116335 /* ViewModels */,
 			);
 			name = CrytoTracker;
 			packageProductDependencies = (
@@ -491,9 +536,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				459ED3B430ACEFF800116335 /* CoinInvestmentBreakdownViewModel.swift in Sources */,
 				459ED38E30AA041B00116335 /* CoinInvestmentBreakdownView.swift in Sources */,
 				459ED34B30A8B9E900116335 /* CircleButtonAnimationView.swift in Sources */,
+				459ED3A930ACEBC500116335 /* TradeBookViewModel.swift in Sources */,
 				459ED34C30A8B9E900116335 /* CircleButtonView.swift in Sources */,
+				459ED3B230ACEEE300116335 /* MarketScreenViewModel.swift in Sources */,
 				459ED34D30A8B9E900116335 /* CoinImageView.swift in Sources */,
 				459ED34E30A8B9E900116335 /* CoinImageViewModel.swift in Sources */,
 				459ED34F30A8B9E900116335 /* CoinLogoView.swift in Sources */,
@@ -540,6 +588,7 @@
 				459ED37230A8B9E900116335 /* CoinImageService.swift in Sources */,
 				459ED37330A8B9E900116335 /* MarketChartDataService.swift in Sources */,
 				459ED37430A8B9E900116335 /* MarketDataService.swift in Sources */,
+				459ED3B630ACF0D900116335 /* ChartViewModel.swift in Sources */,
 				459ED37530A8B9E900116335 /* PortfolioDataService.swift in Sources */,
 				459ED37630A8B9E900116335 /* TransactionDataService.swift in Sources */,
 				459ED37730A8B9E900116335 /* WalletDataService.swift in Sources */,

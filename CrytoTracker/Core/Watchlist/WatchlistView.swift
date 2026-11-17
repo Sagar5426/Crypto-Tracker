@@ -8,108 +8,22 @@
 import SwiftUI
 import SwiftfulUI
 
+@MainActor
 struct WatchlistView: View {
     @Environment(\.colorScheme) private var colorScheme
-    @EnvironmentObject private var vm: MarketViewModel
-    @State private var searchText: String = ""
-    @State private var showSearchBar: Bool = false
-    @State private var selectedCoinForDetail: CoinModel? = nil
-    @State private var showAddCoinSheet: Bool = false
-    @State private var viewMode: WatchlistViewMode = .list
-    @State private var filterCategory: WatchlistFilterCategory = .all
-    @State private var sortOption: WatchlistSortOption = .rank
+    @EnvironmentObject private var marketVM: MarketViewModel
+    
+    // MARK: - View Model
+    @StateObject private var viewModel: WatchlistViewModel
+    
+    // MARK: - Scroll & Geometry UI State
     @State private var scrollViewOffset: CGFloat = 0
     @State private var topSectionHeight: CGFloat = 160
     
-    enum WatchlistViewMode: String {
-        case list, grid
-    }
+    // MARK: - Initializer
     
-    enum WatchlistFilterCategory: String, CaseIterable, Identifiable {
-        case all = "All"
-        case gainers = "Gainers"
-        case losers = "Losers"
-        var id: String { rawValue }
-    }
-    
-    enum WatchlistSortOption: String, CaseIterable, Identifiable {
-        case rank = "Rank"
-        case changeHighLow = "Top 24h Gainers"
-        case changeLowHigh = "Top 24h Dips"
-        case priceHighLow = "Price (High to Low)"
-        case priceLowHigh = "Price (Low to High)"
-        case alphabetical = "Name (A-Z)"
-        
-        var id: String { rawValue }
-    }
-    
-    // MARK: - Computed Properties
-    
-    private var filteredAndSortedWatchlist: [CoinModel] {
-        var coins = vm.watchlistCoins
-        
-        // Search filter
-        if !searchText.isEmpty {
-            let lower = searchText.lowercased()
-            coins = coins.filter {
-                $0.name.lowercased().contains(lower) ||
-                $0.symbol.lowercased().contains(lower)
-            }
-        }
-        
-        // Category filter
-        switch filterCategory {
-        case .all:
-            break
-        case .gainers:
-            coins = coins.filter { ($0.priceChangePercentage24H ?? 0) >= 0 }
-        case .losers:
-            coins = coins.filter { ($0.priceChangePercentage24H ?? 0) < 0 }
-        }
-        
-        // Sorting
-        switch sortOption {
-        case .rank:
-            coins.sort { $0.rank < $1.rank }
-        case .changeHighLow:
-            coins.sort { ($0.priceChangePercentage24H ?? 0) > ($1.priceChangePercentage24H ?? 0) }
-        case .changeLowHigh:
-            coins.sort { ($0.priceChangePercentage24H ?? 0) < ($1.priceChangePercentage24H ?? 0) }
-        case .priceHighLow:
-            coins.sort { $0.currentPrice > $1.currentPrice }
-        case .priceLowHigh:
-            coins.sort { $0.currentPrice < $1.currentPrice }
-        case .alphabetical:
-            coins.sort { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
-        }
-        
-        return coins
-    }
-    
-    private var averageChange24H: Double {
-        let valid = vm.watchlistCoins.compactMap { $0.priceChangePercentage24H }
-        guard !valid.isEmpty else { return 0 }
-        return valid.reduce(0, +) / Double(valid.count)
-    }
-    
-    private var gainersCount: Int {
-        vm.watchlistCoins.filter { ($0.priceChangePercentage24H ?? 0) >= 0 }.count
-    }
-    
-    private var losersCount: Int {
-        vm.watchlistCoins.filter { ($0.priceChangePercentage24H ?? 0) < 0 }.count
-    }
-    
-    private var topPerformer: CoinModel? {
-        vm.watchlistCoins
-            .filter { ($0.priceChangePercentage24H ?? 0) > 0 }
-            .max(by: { ($0.priceChangePercentage24H ?? 0) < ($1.priceChangePercentage24H ?? 0) })
-    }
-    
-    private var topDip: CoinModel? {
-        vm.watchlistCoins
-            .filter { ($0.priceChangePercentage24H ?? 0) < 0 }
-            .min(by: { ($0.priceChangePercentage24H ?? 0) < ($1.priceChangePercentage24H ?? 0) })
+    init(viewModel: WatchlistViewModel? = nil) {
+        self._viewModel = StateObject(wrappedValue: viewModel ?? WatchlistViewModel())
     }
     
     // MARK: - Body
@@ -132,13 +46,13 @@ struct WatchlistView: View {
                                 .opacity(headerBackgroundOpacity)
                         )
                     
-                    if vm.watchlistCoins.isEmpty {
+                    if viewModel.watchlistCoins.isEmpty {
                         ScrollView {
                             emptyWatchlistView
                                 .padding(.top, 20)
                         }
                         .refreshable {
-                            vm.reloadData()
+                            viewModel.reloadData()
                         }
                     } else {
                         scrollViewLayer
@@ -146,11 +60,13 @@ struct WatchlistView: View {
                 }
             }
             .toolbar(.hidden, for: .navigationBar)
-            .sheet(isPresented: $showAddCoinSheet) {
-                AddWatchlistCoinsSheet()
-                    .environmentObject(vm)
+            .onAppear {
+                viewModel.setMarketViewModel(marketVM)
             }
-            .fullScreenCover(item: $selectedCoinForDetail) { coin in
+            .sheet(isPresented: $viewModel.showAddCoinSheet) {
+                AddWatchlistCoinsSheet(viewModel: viewModel)
+            }
+            .fullScreenCover(item: $viewModel.selectedCoinForDetail) { coin in
                 NavigationStack {
                     CoinDetailView(coin: coin)
                 }
@@ -164,7 +80,7 @@ extension WatchlistView {
     
     /// Progress from 0.0 (fully expanded at top) to 1.0 (fully collapsed and pinned)
     private var collapseProgress: Double {
-        if !searchText.isEmpty { return 1.0 }
+        if !viewModel.searchText.isEmpty { return 1.0 }
         guard scrollViewOffset < 0 else { return 0.0 }
         let collapseDistance = max(1.0, topSectionHeight - 10)
         return min(1.0, Double(-scrollViewOffset / collapseDistance))
@@ -228,14 +144,14 @@ extension WatchlistView {
     private var topBar: some View {
         HeaderView(
             title: "Watchlist",
-            showSearchBar: $showSearchBar,
-            searchText: $searchText,
-            isLoading: vm.isLoading,
+            showSearchBar: $viewModel.showSearchBar,
+            searchText: $viewModel.searchText,
+            isLoading: viewModel.isLoading,
             onRefresh: {
-                vm.reloadData()
+                viewModel.reloadData()
             },
             onAdd: {
-                showAddCoinSheet = true
+                viewModel.showAddCoinSheet = true
             }
         )
         .padding(.bottom, 6)
@@ -270,7 +186,7 @@ extension WatchlistView {
 extension WatchlistView {
     
     private var watchlistPulseCard: some View {
-        let isPositive = averageChange24H >= 0
+        let isPositive = viewModel.averageChange24H >= 0
         let avgBadgeColor = isPositive ? Color.theme.green : Color.theme.red
         
         return VStack(spacing: 14) {
@@ -291,7 +207,7 @@ extension WatchlistView {
                             .font(.system(size: 16, weight: .bold, design: .rounded))
                             .foregroundStyle(Color.theme.accent)
                         
-                        Text("\(vm.watchlistCoins.count) Assets Tracked")
+                        Text("\(viewModel.watchlistCoins.count) Assets Tracked")
                             .font(.caption2)
                             .fontWeight(.medium)
                             .foregroundStyle(Color.theme.secondaryText)
@@ -304,7 +220,7 @@ extension WatchlistView {
                 HStack(spacing: 4) {
                     Image(systemName: isPositive ? "arrow.up.right" : "arrow.down.right")
                         .font(.system(size: 10, weight: .bold))
-                    Text(averageChange24H.asPercentString())
+                    Text(viewModel.averageChange24H.asPercentString())
                         .font(.system(size: 12, weight: .bold, design: .rounded))
                     Text("24h avg")
                         .font(.system(size: 10, weight: .medium))
@@ -332,7 +248,7 @@ extension WatchlistView {
                         HStack(spacing: 2) {
                             Image(systemName: "arrow.up")
                                 .font(.system(size: 8, weight: .bold))
-                            Text("\(gainersCount)")
+                            Text("\(viewModel.gainersCount)")
                                 .font(.system(size: 13, weight: .bold, design: .rounded))
                         }
                         .foregroundStyle(Color.theme.green)
@@ -343,7 +259,7 @@ extension WatchlistView {
                         HStack(spacing: 2) {
                             Image(systemName: "arrow.down")
                                 .font(.system(size: 8, weight: .bold))
-                            Text("\(losersCount)")
+                            Text("\(viewModel.losersCount)")
                                 .font(.system(size: 13, weight: .bold, design: .rounded))
                         }
                         .foregroundStyle(Color.theme.red)
@@ -352,9 +268,9 @@ extension WatchlistView {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 
                 // Metric 2: Top Gainer
-                if let topGainer = topPerformer {
+                if let topGainer = viewModel.topPerformer {
                     Button {
-                        selectedCoinForDetail = topGainer
+                        viewModel.selectedCoinForDetail = topGainer
                     } label: {
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Top Gainer")
@@ -371,11 +287,10 @@ extension WatchlistView {
                                         .font(.system(size: 12, weight: .bold))
                                         .foregroundStyle(Color.theme.accent)
                                 }
-                                    
-                                    Text("+\(topGainer.priceChangePercentage24H?.asPercentString() ?? "0%")")
-                                        .font(.system(size: 11, weight: .bold))
-                                        .foregroundStyle(Color.theme.green)
                                 
+                                Text("+" + (topGainer.priceChangePercentage24H?.asPercentString() ?? "0%"))
+                                    .font(.system(size: 11, weight: .bold))
+                                    .foregroundStyle(Color.theme.green)
                             }
                         }
                     }
@@ -394,9 +309,9 @@ extension WatchlistView {
                 }
                 
                 // Metric 3: Top Dip
-                if let dip = topDip {
+                if let dip = viewModel.topDip {
                     Button {
-                        selectedCoinForDetail = dip
+                        viewModel.selectedCoinForDetail = dip
                     } label: {
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Top Dip")
@@ -475,21 +390,20 @@ extension WatchlistView {
         HStack(spacing: 8) {
             // Filter Pills (All / Gainers / Losers)
             HStack(spacing: 6) {
-                ForEach(WatchlistFilterCategory.allCases) { category in
-                    let isSelected = filterCategory == category
+                ForEach(WatchlistViewModel.FilterCategory.allCases) { category in
+                    let isSelected = viewModel.filterCategory == category
                     let count: Int = {
                         switch category {
-                        case .all: return vm.watchlistCoins.count
-                        case .gainers: return gainersCount
-                        case .losers: return losersCount
+                        case .all: return viewModel.watchlistCoins.count
+                        case .gainers: return viewModel.gainersCount
+                        case .losers: return viewModel.losersCount
                         }
                     }()
                     
                     Button {
                         withAnimation(.spring(response: 0.28, dampingFraction: 0.75)) {
-                            filterCategory = category
+                            viewModel.setFilterCategory(category)
                         }
-                        HapticManager.impact(style: .light)
                     } label: {
                         HStack(spacing: 4) {
                             Text(category.rawValue)
@@ -515,8 +429,8 @@ extension WatchlistView {
             
             // Sort Menu Button
             Menu {
-                Picker("Sort By", selection: $sortOption) {
-                    ForEach(WatchlistSortOption.allCases) { option in
+                Picker("Sort By", selection: $viewModel.sortOption) {
+                    ForEach(WatchlistViewModel.SortOption.allCases) { option in
                         Text(option.rawValue).tag(option)
                     }
                 }
@@ -525,7 +439,7 @@ extension WatchlistView {
                     Image(systemName: "arrow.up.arrow.down")
                         .font(.system(size: 11, weight: .bold))
                 }
-                .foregroundStyle(sortOption == .rank ? Color.theme.secondaryText : Color.theme.accent)
+                .foregroundStyle(viewModel.sortOption == .rank ? Color.theme.secondaryText : Color.theme.accent)
                 .frame(width: 32, height: 32)
                 .background(
                     Circle()
@@ -536,11 +450,10 @@ extension WatchlistView {
             // Grid / List Toggle
             Button {
                 withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                    viewMode = viewMode == .list ? .grid : .list
+                    viewModel.toggleViewMode()
                 }
-                HapticManager.impact(style: .light)
             } label: {
-                Image(systemName: viewMode == .list ? "square.grid.2x2" : "list.bullet")
+                Image(systemName: viewModel.viewMode == .list ? "square.grid.2x2" : "list.bullet")
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(Color.theme.accent)
                     .frame(width: 32, height: 32)
@@ -586,7 +499,7 @@ extension WatchlistView {
             content: {
                 LazyVStack(spacing: 12, pinnedViews: [.sectionHeaders]) {
                     // Watchlist Pulse Summary Card (collapsible and disappears while scrolling)
-                    if searchText.isEmpty {
+                    if viewModel.searchText.isEmpty {
                         collapsiblePulseSection
                             .zIndex(1)
                     }
@@ -594,14 +507,14 @@ extension WatchlistView {
                     // Sticky Section: Filter & Controls Bar sticks intact when scrolled
                     Section {
                         // Watchlist Content
-                        if filteredAndSortedWatchlist.isEmpty && !searchText.isEmpty {
+                        if viewModel.filteredAndSortedWatchlist.isEmpty && !viewModel.searchText.isEmpty {
                             noResultsView
                                 .zIndex(0)
-                        } else if filteredAndSortedWatchlist.isEmpty {
+                        } else if viewModel.filteredAndSortedWatchlist.isEmpty {
                             noCategoryMatchesView
                                 .zIndex(0)
                         } else {
-                            if viewMode == .list {
+                            if viewModel.viewMode == .list {
                                 columnTitles
                                     .zIndex(0)
                                 coinsListView
@@ -626,7 +539,7 @@ extension WatchlistView {
         .clipped()
         .scrollDismissesKeyboard(.interactively)
         .refreshable {
-            vm.reloadData()
+            viewModel.reloadData()
         }
     }
 }
@@ -636,16 +549,16 @@ extension WatchlistView {
     
     private var coinsListView: some View {
         LazyVStack(spacing: 8) {
-            ForEach(filteredAndSortedWatchlist) { coin in
+            ForEach(viewModel.filteredAndSortedWatchlist) { coin in
                 Button {
-                    selectedCoinForDetail = coin
+                    viewModel.selectedCoinForDetail = coin
                 } label: {
                     CoinRowView(
                         coin: coin,
                         isFavorite: true,
                         onFavoriteTapped: {
                             withAnimation {
-                                vm.toggleWatchlist(coin: coin)
+                                viewModel.toggleWatchlist(coin: coin)
                             }
                         }
                     )
@@ -666,7 +579,7 @@ extension WatchlistView {
                 .contextMenu {
                     Button(role: .destructive) {
                         withAnimation {
-                            vm.toggleWatchlist(coin: coin)
+                            viewModel.toggleWatchlist(coin: coin)
                         }
                     } label: {
                         Label("Remove from Watchlist", systemImage: "star.slash")
@@ -684,13 +597,13 @@ extension WatchlistView {
             ],
             spacing: 12
         ) {
-            ForEach(filteredAndSortedWatchlist) { coin in
+            ForEach(viewModel.filteredAndSortedWatchlist) { coin in
                 Button {
-                    selectedCoinForDetail = coin
+                    viewModel.selectedCoinForDetail = coin
                 } label: {
                     WatchlistGridCard(coin: coin) {
                         withAnimation {
-                            vm.toggleWatchlist(coin: coin)
+                            viewModel.toggleWatchlist(coin: coin)
                         }
                     }
                 }
@@ -698,7 +611,7 @@ extension WatchlistView {
                 .contextMenu {
                     Button(role: .destructive) {
                         withAnimation {
-                            vm.toggleWatchlist(coin: coin)
+                            viewModel.toggleWatchlist(coin: coin)
                         }
                     } label: {
                         Label("Remove from Watchlist", systemImage: "star.slash")
@@ -810,7 +723,7 @@ extension WatchlistView {
                 .foregroundStyle(Color.theme.secondaryText)
                 .padding(.top, 24)
             
-            Text("No results for \"\(searchText)\"")
+            Text("No results for \"\(viewModel.searchText)\"")
                 .font(.headline)
                 .foregroundStyle(Color.theme.accent)
             
@@ -825,18 +738,18 @@ extension WatchlistView {
     
     private var noCategoryMatchesView: some View {
         VStack(spacing: 10) {
-            Text("No \(filterCategory.rawValue) in Watchlist")
+            Text("No \(viewModel.filterCategory.rawValue) in Watchlist")
                 .font(.headline)
                 .foregroundStyle(Color.theme.accent)
                 .padding(.top, 20)
             
-            Text("None of your tracked assets currently fall into the \(filterCategory.rawValue.lowercased()) category.")
+            Text("None of your tracked assets currently fall into the \(viewModel.filterCategory.rawValue.lowercased()) category.")
                 .font(.caption)
                 .foregroundStyle(Color.theme.secondaryText)
             
             Button("Show All Coins") {
                 withAnimation {
-                    filterCategory = .all
+                    viewModel.resetCategoryFilter()
                 }
             }
             .font(.caption)
@@ -880,7 +793,7 @@ extension WatchlistView {
             
             // Primary Action: Add Coins Button
             Button {
-                showAddCoinSheet = true
+                viewModel.showAddCoinSheet = true
             } label: {
                 HStack(spacing: 8) {
                     Image(systemName: "plus.circle.fill")
@@ -898,7 +811,7 @@ extension WatchlistView {
             .padding(.top, 4)
             
             // Quick Add Suggested Cards
-            if !vm.allCoins.isEmpty {
+            if !viewModel.allCoins.isEmpty {
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Popular Cryptocurrencies:")
                         .font(.caption)
@@ -907,7 +820,7 @@ extension WatchlistView {
                         .padding(.horizontal)
                     
                     VStack(spacing: 8) {
-                        ForEach(vm.allCoins.prefix(4)) { coin in
+                        ForEach(viewModel.suggestedCoins) { coin in
                             HStack {
                                 CoinImageView(coin: coin)
                                     .frame(width: 28, height: 28)
@@ -938,7 +851,7 @@ extension WatchlistView {
                                 
                                 Button {
                                     withAnimation {
-                                        vm.toggleWatchlist(coin: coin)
+                                        viewModel.toggleWatchlist(coin: coin)
                                     }
                                 } label: {
                                     Image(systemName: "star")
@@ -973,39 +886,7 @@ extension WatchlistView {
 // MARK: - Add Coins to Watchlist Sheet
 struct AddWatchlistCoinsSheet: View {
     @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject private var vm: MarketViewModel
-    @State private var searchText: String = ""
-    @State private var filterMode: AddFilterMode = .all
-    
-    enum AddFilterMode: String, CaseIterable, Identifiable {
-        case all = "All"
-        case notTracked = "Not Tracked"
-        case tracked = "Tracked"
-        var id: String { rawValue }
-    }
-    
-    private var displayedCoins: [CoinModel] {
-        var coins = vm.allCoins
-        
-        if !searchText.isEmpty {
-            let lower = searchText.lowercased()
-            coins = coins.filter {
-                $0.name.lowercased().contains(lower) ||
-                $0.symbol.lowercased().contains(lower)
-            }
-        }
-        
-        switch filterMode {
-        case .all:
-            break
-        case .notTracked:
-            coins = coins.filter { !vm.isWatchlisted(coin: $0) }
-        case .tracked:
-            coins = coins.filter { vm.isWatchlisted(coin: $0) }
-        }
-        
-        return coins
-    }
+    @ObservedObject var viewModel: WatchlistViewModel
     
     var body: some View {
         NavigationStack {
@@ -1015,17 +896,17 @@ struct AddWatchlistCoinsSheet: View {
                 
                 VStack(spacing: 12) {
                     // Search Bar
-                    SearchBarView(searchText: $searchText)
+                    SearchBarView(searchText: $viewModel.addSheetSearchText)
                         .padding(.horizontal)
                         .padding(.top, 8)
                     
                     // Filter Chips
                     HStack(spacing: 8) {
-                        ForEach(AddFilterMode.allCases) { mode in
-                            let isSelected = filterMode == mode
+                        ForEach(WatchlistViewModel.AddFilterMode.allCases) { mode in
+                            let isSelected = viewModel.addSheetFilterMode == mode
                             Button {
                                 withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
-                                    filterMode = mode
+                                    viewModel.addSheetFilterMode = mode
                                 }
                             } label: {
                                 Text(mode.rawValue)
@@ -1043,7 +924,7 @@ struct AddWatchlistCoinsSheet: View {
                         
                         Spacer()
                         
-                        Text("\(vm.watchlistCoinIDs.count) tracked")
+                        Text("\(viewModel.watchlistCoinIDs.count) tracked")
                             .font(.caption)
                             .foregroundStyle(Color.theme.secondaryText)
                     }
@@ -1051,8 +932,8 @@ struct AddWatchlistCoinsSheet: View {
                     
                     // Coins List
                     List {
-                        ForEach(displayedCoins) { coin in
-                            let isTracked = vm.isWatchlisted(coin: coin)
+                        ForEach(viewModel.displayedAddCoins) { coin in
+                            let isTracked = viewModel.isWatchlisted(coin: coin)
                             
                             HStack(spacing: 12) {
                                 CoinImageView(coin: coin)
@@ -1092,7 +973,7 @@ struct AddWatchlistCoinsSheet: View {
                                 
                                 Button {
                                     withAnimation {
-                                        vm.toggleWatchlist(coin: coin)
+                                        viewModel.toggleWatchlist(coin: coin)
                                     }
                                 } label: {
                                     Image(systemName: isTracked ? "star.fill" : "star")
@@ -1122,4 +1003,9 @@ struct AddWatchlistCoinsSheet: View {
             }
         }
     }
+}
+
+#Preview {
+    WatchlistView()
+        .environmentObject(DeveloperPreview.instance.homeVM)
 }

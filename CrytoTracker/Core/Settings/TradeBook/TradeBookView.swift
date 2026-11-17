@@ -10,122 +10,27 @@ import SwiftfulUI
 
 /// Read-only TradeBook view that acts as an immutable, foolproof ledger for all
 /// crypto buy and sell trade orders executed in the application.
+@MainActor
 struct TradeBookView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject private var vm: MarketViewModel
     
-    // MARK: - State Properties
-    @State private var searchText: String = ""
-    @State private var selectedFilter: TradeFilterType = .all
-    @State private var sortOption: TradeSortOption = .newest
-    @State private var isSpinning: Bool = false
+    // MARK: - View Model
+    @StateObject private var viewModel: TradeBookViewModel
+    
+    // MARK: - Layout & Geometry State
     @State private var scrollViewOffset: CGFloat = 0
     @State private var topSectionHeight: CGFloat = 280
     
-    // Sheets
-    @State private var selectedTradeForDetail: TransactionEntity? = nil
-    @State private var selectedCoinForDetail: CoinModel? = nil
+    // MARK: - Typealiases for backward compatibility
+    typealias TradeFilterType = TradeBookViewModel.TradeFilterType
+    typealias TradeSortOption = TradeBookViewModel.TradeSortOption
     
-    // MARK: - Filter & Sort Enums
-    enum TradeFilterType: String, CaseIterable, Identifiable {
-        case all = "All"
-        case buys = "Buys"
-        case sells = "Sells"
-        
-        var id: String { rawValue }
-    }
+    // MARK: - Initializer
     
-    enum TradeSortOption: String, CaseIterable, Identifiable {
-        case newest = "Newest"
-        case oldest = "Oldest"
-        case highestValue = "Highest Value"
-        case lowestValue = "Lowest Value"
-        case largestAmount = "Largest Quantity"
-        
-        var id: String { rawValue }
-        
-        var shortTitle: String {
-            switch self {
-            case .newest: return "Newest"
-            case .oldest: return "Oldest"
-            case .highestValue: return "High $"
-            case .lowestValue: return "Low $"
-            case .largestAmount: return "Qty"
-            }
-        }
-    }
-    
-    // MARK: - Computed Trades Data
-    
-    /// All crypto buy and sell trades (excluding cash deposits and withdrawals)
-    private var cryptoTrades: [TransactionEntity] {
-        vm.transactions.filter {
-            let type = ($0.transactionType ?? "").uppercased()
-            return ($0.coinID ?? "") != "usd-cash" && (type == "BUY" || type == "SELL")
-        }
-    }
-    
-    /// Filtered and sorted trade orders list
-    private var filteredTrades: [TransactionEntity] {
-        var list = cryptoTrades
-        
-        // 1. Filter by Trade Type
-        switch selectedFilter {
-        case .all:
-            break
-        case .buys:
-            list = list.filter { ($0.transactionType ?? "").uppercased() == "BUY" }
-        case .sells:
-            list = list.filter { ($0.transactionType ?? "").uppercased() == "SELL" }
-        }
-        
-        // 2. Search Query
-        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        if !query.isEmpty {
-            list = list.filter {
-                ($0.coinName ?? "").lowercased().contains(query) ||
-                ($0.coinSymbol ?? "").lowercased().contains(query)
-            }
-        }
-        
-        // 3. Sort
-        switch sortOption {
-        case .newest:
-            list.sort { ($0.timestamp ?? Date()) > ($1.timestamp ?? Date()) }
-        case .oldest:
-            list.sort { ($0.timestamp ?? Date()) < ($1.timestamp ?? Date()) }
-        case .highestValue:
-            list.sort { $0.totalValue > $1.totalValue }
-        case .lowestValue:
-            list.sort { $0.totalValue < $1.totalValue }
-        case .largestAmount:
-            list.sort { $0.amount > $1.amount }
-        }
-        
-        return list
-    }
-    
-    // MARK: - Metrics Calculations
-    
-    private var buyTrades: [TransactionEntity] {
-        cryptoTrades.filter { ($0.transactionType ?? "").uppercased() == "BUY" }
-    }
-    
-    private var sellTrades: [TransactionEntity] {
-        cryptoTrades.filter { ($0.transactionType ?? "").uppercased() == "SELL" }
-    }
-    
-    private var totalVolume: Double {
-        cryptoTrades.map { $0.totalValue }.reduce(0, +)
-    }
-    
-    private var totalBuyVolume: Double {
-        buyTrades.map { $0.totalValue }.reduce(0, +)
-    }
-    
-    private var totalSellVolume: Double {
-        sellTrades.map { $0.totalValue }.reduce(0, +)
+    init(viewModel: TradeBookViewModel? = nil) {
+        self._viewModel = StateObject(wrappedValue: viewModel ?? TradeBookViewModel())
     }
     
     var body: some View {
@@ -145,7 +50,7 @@ struct TradeBookView: View {
                             .opacity(headerBackgroundOpacity)
                     )
                 
-                if cryptoTrades.isEmpty {
+                if viewModel.cryptoTrades.isEmpty {
                     emptyTradeBookView
                 } else {
                     scrollViewLayer
@@ -154,18 +59,21 @@ struct TradeBookView: View {
             .ignoresSafeArea(edges: .bottom)
         }
         .toolbar(.hidden, for: .navigationBar)
-        .sheet(item: $selectedTradeForDetail) { trade in
+        .onAppear {
+            viewModel.setMarketViewModel(vm)
+        }
+        .sheet(item: $viewModel.selectedTradeForDetail) { trade in
             NavigationStack {
                 TradeReceiptDetailSheet(
                     trade: trade,
+                    viewModel: viewModel,
                     onViewCoin: { coin in
-                        selectedTradeForDetail = nil
-                        selectedCoinForDetail = coin
+                        viewModel.viewCoinDetail(coin: coin)
                     }
                 )
             }
         }
-        .fullScreenCover(item: $selectedCoinForDetail) { coin in
+        .fullScreenCover(item: $viewModel.selectedCoinForDetail) { coin in
             NavigationStack {
                 CoinDetailView(coin: coin)
             }
@@ -240,7 +148,7 @@ extension TradeBookView {
                 .scaleEffect(1.0 - (collapseProgress * 0.03), anchor: .top)
             
             // 2. Search Bar
-            SearchBarView(searchText: $searchText)
+            SearchBarView(searchText: $viewModel.searchText)
                 .padding(.top, -2)
                 .opacity(searchBarFadeOpacity)
                 .scaleEffect(1.0 - (collapseProgress * 0.02), anchor: .top)
@@ -287,7 +195,7 @@ extension TradeBookView {
                     .font(.system(size: 24, weight: .bold, design: .rounded))
                     .foregroundStyle(Color.theme.accent)
                 
-                Text("\(cryptoTrades.count)")
+                Text("\(viewModel.cryptoTrades.count)")
                     .font(.system(size: 11, weight: .bold))
                     .padding(.horizontal, 7)
                     .padding(.vertical, 2.5)
@@ -300,19 +208,15 @@ extension TradeBookView {
             
             // Refresh Button
             Button {
-                HapticManager.notification(type: .success)
-                withAnimation(.easeInOut(duration: 0.6)) {
-                    isSpinning.toggle()
-                }
-                vm.reloadData()
+                viewModel.refreshData()
             } label: {
                 Image(systemName: "arrow.clockwise")
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(Color.theme.accent)
-                    .rotationEffect(.degrees(vm.isLoading || isSpinning ? 360 : 0))
+                    .rotationEffect(.degrees(viewModel.isLoading || viewModel.isSpinning ? 360 : 0))
                     .animation(
-                        vm.isLoading ? .linear(duration: 1).repeatForever(autoreverses: false) : .default,
-                        value: vm.isLoading
+                        viewModel.isLoading ? .linear(duration: 1).repeatForever(autoreverses: false) : .default,
+                        value: viewModel.isLoading
                     )
                     .frame(width: 36, height: 36)
                     .background(
@@ -343,7 +247,7 @@ extension TradeBookView {
                     
                     // Sticky Section: Filter & Sort Bar sticks intact when scrolled
                     Section {
-                        if filteredTrades.isEmpty {
+                        if viewModel.filteredTrades.isEmpty {
                             filteredEmptyStateView
                                 .zIndex(0)
                         } else {
@@ -364,7 +268,7 @@ extension TradeBookView {
         )
         .scrollDismissesKeyboard(.interactively)
         .refreshable {
-            vm.reloadData()
+            viewModel.refreshData()
         }
     }
     
@@ -404,7 +308,7 @@ extension TradeBookView {
                             .foregroundStyle(Color.theme.secondaryText)
                     }
                     
-                    Text(totalVolume.asCurrencyWith2Decimals())
+                    Text(viewModel.totalVolume.asCurrencyWith2Decimals())
                         .font(.system(size: 26, weight: .bold, design: .rounded))
                         .foregroundStyle(Color.theme.accent)
                         .lineLimit(1)
@@ -418,7 +322,7 @@ extension TradeBookView {
                         .font(.system(size: 10, weight: .bold))
                         .foregroundStyle(Color.theme.secondaryText)
                     
-                    Text("\(cryptoTrades.count)")
+                    Text("\(viewModel.cryptoTrades.count)")
                         .font(.system(size: 20, weight: .bold, design: .rounded))
                         .foregroundStyle(Color.theme.accent)
                         .lineLimit(1)
@@ -432,16 +336,16 @@ extension TradeBookView {
             HStack(spacing: 10) {
                 metricSubCard(
                     title: "Buys",
-                    countText: "\(buyTrades.count) Orders",
-                    amountText: totalBuyVolume.asCurrencyWith2Decimals(),
+                    countText: "\(viewModel.buyTrades.count) Orders",
+                    amountText: viewModel.totalBuyVolume.asCurrencyWith2Decimals(),
                     color: Color.theme.green,
                     systemImage: "arrow.down.left.circle.fill"
                 )
                 
                 metricSubCard(
                     title: "Sells",
-                    countText: "\(sellTrades.count) Orders",
-                    amountText: totalSellVolume.asCurrencyWith2Decimals(),
+                    countText: "\(viewModel.sellTrades.count) Orders",
+                    amountText: viewModel.totalSellVolume.asCurrencyWith2Decimals(),
                     color: Color.theme.red,
                     systemImage: "arrow.up.right.circle.fill"
                 )
@@ -505,8 +409,8 @@ extension TradeBookView {
     }
     
     private var volumeRatioBar: some View {
-        let buyRatio = totalVolume > 0 ? (totalBuyVolume / totalVolume) : 0.5
-        let sellRatio = totalVolume > 0 ? (totalSellVolume / totalVolume) : 0.5
+        let buyRatio = viewModel.buyRatio
+        let sellRatio = viewModel.sellRatio
         
         return VStack(spacing: 4) {
             GeometryReader { geo in
@@ -545,10 +449,10 @@ extension TradeBookView {
             // Filter Capsules: All, Buys, Sells
             HStack(spacing: 6) {
                 ForEach(TradeFilterType.allCases) { filter in
-                    let isSelected = selectedFilter == filter
+                    let isSelected = viewModel.selectedFilter == filter
                     Button {
                         withAnimation(.easeInOut(duration: 0.2)) {
-                            selectedFilter = filter
+                            viewModel.selectedFilter = filter
                         }
                         HapticManager.selection()
                     } label: {
@@ -557,7 +461,7 @@ extension TradeBookView {
                                 .font(.system(size: 12, weight: .bold))
                                 .lineLimit(1)
                             
-                            Text("(\(countFor(filter: filter)))")
+                            Text("(\(viewModel.countFor(filter: filter)))")
                                 .font(.system(size: 10, weight: .semibold))
                                 .lineLimit(1)
                                 .opacity(0.8)
@@ -578,7 +482,7 @@ extension TradeBookView {
             
             // Sort Menu Button
             Menu {
-                Picker("Sort Order", selection: $sortOption) {
+                Picker("Sort Order", selection: $viewModel.sortOption) {
                     ForEach(TradeSortOption.allCases) { option in
                         Text(option.rawValue).tag(option)
                     }
@@ -587,7 +491,7 @@ extension TradeBookView {
                 HStack(spacing: 4) {
                     Image(systemName: "arrow.up.arrow.down")
                         .font(.system(size: 10, weight: .bold))
-                    Text(sortOption.shortTitle)
+                    Text(viewModel.sortOption.shortTitle)
                         .font(.system(size: 11, weight: .semibold))
                         .lineLimit(1)
                 }
@@ -603,23 +507,15 @@ extension TradeBookView {
         .padding(.horizontal, 16)
     }
     
-    private func countFor(filter: TradeFilterType) -> Int {
-        switch filter {
-        case .all: return cryptoTrades.count
-        case .buys: return buyTrades.count
-        case .sells: return sellTrades.count
-        }
-    }
-    
     // MARK: - Trades List Section
     private var tradesListSection: some View {
         LazyVStack(spacing: 10) {
-            ForEach(filteredTrades, id: \.id) { trade in
+            ForEach(viewModel.filteredTrades, id: \.id) { trade in
                 TradeRowCard(
                     trade: trade,
-                    liveCoin: vm.allCoins.first { $0.id.lowercased() == (trade.coinID ?? "").lowercased() },
+                    liveCoin: viewModel.liveCoin(for: trade),
                     onTap: {
-                        selectedTradeForDetail = trade
+                        viewModel.selectTradeForDetail(trade)
                     }
                 )
                 .padding(.horizontal, 16)
@@ -686,16 +582,13 @@ extension TradeBookView {
                 .fontWeight(.bold)
                 .foregroundStyle(Color.theme.accent)
             
-            Text("No transactions matched '\(searchText)' with the current filters.")
+            Text("No transactions matched '\(viewModel.searchText)' with the current filters.")
                 .font(.caption)
                 .foregroundStyle(Color.theme.secondaryText)
                 .multilineTextAlignment(.center)
             
             Button {
-                withAnimation {
-                    searchText = ""
-                    selectedFilter = .all
-                }
+                viewModel.resetFilters()
             } label: {
                 Text("Reset Filters")
                     .font(.caption)
@@ -775,7 +668,7 @@ struct TradeRowCard: View {
                         .lineLimit(1)
                 }
                 
-                // 2. Structured Data Section: Clearly mentioning Qty Sold/Bought, Selling/Buying Price, and Selling/Buying Total Value
+                // 2. Structured Data Section
                 VStack(spacing: 8) {
                     HStack(alignment: .top) {
                         // Qty Sold / Bought
@@ -880,6 +773,7 @@ struct TradeReceiptDetailSheet: View {
     @EnvironmentObject private var vm: MarketViewModel
     
     let trade: TransactionEntity
+    var viewModel: TradeBookViewModel? = nil
     let onViewCoin: (CoinModel) -> Void
     
     @State private var hasCopiedID: Bool = false
@@ -893,7 +787,10 @@ struct TradeReceiptDetailSheet: View {
     }
     
     private var liveCoin: CoinModel? {
-        vm.allCoins.first { $0.id.lowercased() == (trade.coinID ?? "").lowercased() }
+        if let viewModel = viewModel {
+            return viewModel.liveCoin(for: trade)
+        }
+        return vm.allCoins.first { $0.id.lowercased() == (trade.coinID ?? "").lowercased() }
     }
     
     var body: some View {

@@ -8,46 +8,26 @@
 import SwiftUI
 import SwiftfulUI
 
+@MainActor
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject private var vm: MarketViewModel
     
+    // MARK: - View Model
+    @StateObject private var viewModel: SettingsViewModel
+    
     var showsDismissButton: Bool = false
     
-    // MARK: - State & AppStorage
-    @AppStorage("haptics_enabled") private var hapticsEnabled: Bool = true
-    @AppStorage("compact_numbers") private var compactNumbers: Bool = false
-    @AppStorage("auto_refresh_enabled") private var autoRefreshEnabled: Bool = true
-    @AppStorage("selected_currency") private var selectedCurrency: String = "USD ($)"
-    
-    @State private var cachedImageCount: Int = LocalFileManager.instance.getFolderItemCount(folderName: "coin_images")
-    @State private var showClearCacheAlert: Bool = false
-    @State private var showResetWalletAlert: Bool = false
-    @State private var toastMessage: String? = nil
-    @State private var showProfitAndLossView: Bool = false
-    @State private var showTradeBookView: Bool = false
+    // MARK: - Layout State
     @State private var scrollViewOffset: CGFloat = 0
     @State private var fullHeaderSize: CGSize = .zero
     
-    private let coingeckoURL = URL(string: "https://www.coingecko.com")!
-    private let coingeckoApiURL = URL(string: "https://www.coingecko.com/en/api")!
+    // MARK: - Initializer
     
-    private let supportedCurrencies = [
-        "USD ($)", "EUR (€)", "GBP (£)", "JPY (¥)", "CAD ($)", "AUD ($)", "INR (₹)"
-    ]
-    
-    // MARK: - Computed Properties
-    
-    private var cryptoTradesCount: Int {
-        vm.transactions.filter {
-            let type = ($0.transactionType ?? "").uppercased()
-            return ($0.coinID ?? "") != "usd-cash" && (type == "BUY" || type == "SELL")
-        }.count
-    }
-    
-    private var netTotalPnL: Double {
-        vm.realizedPnLSummary.totalRealizedPnL + vm.portfolioTotalProfitLoss
+    init(viewModel: SettingsViewModel? = nil, showsDismissButton: Bool = false) {
+        self._viewModel = StateObject(wrappedValue: viewModel ?? SettingsViewModel())
+        self.showsDismissButton = showsDismissButton
     }
     
     // MARK: - Layout & Header Fade Progress
@@ -80,40 +60,39 @@ struct SettingsView: View {
                 stickyHeaderView
                 
                 // Floating Toast Banner
-                if let message = toastMessage {
+                if let message = viewModel.toastMessage {
                     toastBanner(message: message)
                         .transition(.move(edge: .top).combined(with: .opacity))
                         .zIndex(100)
                 }
             }
             .toolbar(.hidden, for: .navigationBar)
-            .alert("Clear Image Cache", isPresented: $showClearCacheAlert) {
+            .onAppear {
+                viewModel.setMarketViewModel(vm)
+                viewModel.updateCacheCount()
+            }
+            .alert("Clear Image Cache", isPresented: $viewModel.showClearCacheAlert) {
                 Button("Clear", role: .destructive) {
-                    LocalFileManager.instance.clearFolder(folderName: "coin_images")
-                    cachedImageCount = LocalFileManager.instance.getFolderItemCount(folderName: "coin_images")
-                    HapticManager.notification(type: .success)
-                    showToast("Image cache cleared successfully!")
+                    viewModel.clearImageCache()
                 }
                 Button("Cancel", role: .cancel) { }
             } message: {
                 Text("This will delete all cached coin icons from local storage. They will reload automatically when needed.")
             }
-            .alert("Reset Cash Wallet", isPresented: $showResetWalletAlert) {
+            .alert("Reset Cash Wallet", isPresented: $viewModel.showResetWalletAlert) {
                 Button("Reset to $10,000", role: .destructive) {
-                    vm.resetCashWallet(to: 10_000.0)
-                    HapticManager.notification(type: .success)
-                    showToast("Cash balance reset to $10,000.00!")
+                    viewModel.resetCashWallet()
                 }
                 Button("Cancel", role: .cancel) { }
             } message: {
                 Text("This will restore your wallet fund balance to the default $10,000.00.")
             }
-            .fullScreenCover(isPresented: $showProfitAndLossView) {
+            .fullScreenCover(isPresented: $viewModel.showProfitAndLossView) {
                 NavigationStack {
                     ProfitAndLossView()
                 }
             }
-            .fullScreenCover(isPresented: $showTradeBookView) {
+            .fullScreenCover(isPresented: $viewModel.showTradeBookView) {
                 NavigationStack {
                     TradeBookView()
                 }
@@ -158,13 +137,12 @@ extension SettingsView {
     private var stickyHeaderView: some View {
         HeaderView(
             title: "Settings",
-            isLoading: vm.isLoading,
+            isLoading: viewModel.isLoading,
             showProBadge: true,
             showSearchButton: false,
             showsDismissButton: showsDismissButton,
             onRefresh: {
-                vm.reloadData()
-                showToast("Market data synced!")
+                viewModel.refreshMarketData()
             },
             onDismiss: {
                 dismiss()
@@ -238,7 +216,7 @@ extension SettingsView {
             }
         )
         .refreshable {
-            vm.reloadData()
+            viewModel.refreshMarketData()
         }
     }
 }
@@ -319,7 +297,7 @@ extension SettingsView {
             HStack(spacing: 8) {
                 heroMetricItem(
                     title: "Cash Balance",
-                    value: vm.cashBalance.asCurrencyWith2Decimals(),
+                    value: viewModel.cashBalance.asCurrencyWith2Decimals(),
                     color: Color.theme.green
                 )
                 
@@ -329,7 +307,7 @@ extension SettingsView {
                 
                 heroMetricItem(
                     title: "Portfolio",
-                    value: "\(vm.portfolioCoins.count) Coins",
+                    value: "\(viewModel.portfolioCoinsCount) Coins",
                     color: Color.theme.accent
                 )
                 
@@ -339,7 +317,7 @@ extension SettingsView {
                 
                 heroMetricItem(
                     title: "Watchlist",
-                    value: "\(vm.watchlistCoins.count) Coins",
+                    value: "\(viewModel.watchlistCoinsCount) Coins",
                     color: Color.yellow
                 )
             }
@@ -401,7 +379,7 @@ extension SettingsView {
                         subtitle: "Deposit, withdraw & test capital",
                         trailingContent: AnyView(
                             HStack(spacing: 6) {
-                                Text(vm.cashBalance.asCurrencyWith2Decimals())
+                                Text(viewModel.cashBalance.asCurrencyWith2Decimals())
                                     .font(.system(size: 13, weight: .bold, design: .rounded))
                                     .foregroundStyle(Color.theme.green)
                                 
@@ -418,9 +396,9 @@ extension SettingsView {
                 
                 // 2. Profit and Loss Row
                 Button {
-                    showProfitAndLossView = true
+                    viewModel.showProfitAndLossView = true
                 } label: {
-                    let pnl = netTotalPnL
+                    let pnl = viewModel.netTotalPnL
                     let isPositive = pnl >= 0
                     let pnlColor = isPositive ? Color.theme.green : Color.theme.red
                     
@@ -448,7 +426,7 @@ extension SettingsView {
                 
                 // 3. TradeBook Row
                 Button {
-                    showTradeBookView = true
+                    viewModel.showTradeBookView = true
                 } label: {
                     settingsRow(
                         icon: "book.closed.fill",
@@ -457,7 +435,7 @@ extension SettingsView {
                         subtitle: "Complete order execution history",
                         trailingContent: AnyView(
                             HStack(spacing: 6) {
-                                Text("\(cryptoTradesCount) Orders")
+                                Text("\(viewModel.cryptoTradesCount) Orders")
                                     .font(.system(size: 11, weight: .bold))
                                     .padding(.horizontal, 7)
                                     .padding(.vertical, 2.5)
@@ -494,7 +472,7 @@ extension SettingsView {
                     title: "Haptic Feedback",
                     subtitle: "Tactile response on gestures & trades",
                     trailingContent: AnyView(
-                        Toggle("", isOn: $hapticsEnabled)
+                        Toggle("", isOn: $viewModel.hapticsEnabled)
                             .labelsHidden()
                             .tint(Color.green)
                     )
@@ -509,7 +487,7 @@ extension SettingsView {
                     title: "Compact Metrics",
                     subtitle: "Shorten large numbers ($1.2M, $45.6K)",
                     trailingContent: AnyView(
-                        Toggle("", isOn: $compactNumbers)
+                        Toggle("", isOn: $viewModel.compactNumbers)
                             .labelsHidden()
                             .tint(Color.green)
                     )
@@ -524,7 +502,7 @@ extension SettingsView {
                     title: "Live Market Sync",
                     subtitle: "Auto-refresh rates periodically",
                     trailingContent: AnyView(
-                        Toggle("", isOn: $autoRefreshEnabled)
+                        Toggle("", isOn: $viewModel.autoRefreshEnabled)
                             .labelsHidden()
                             .tint(Color.green)
                     )
@@ -534,8 +512,8 @@ extension SettingsView {
                 
                 // Currency Selector Menu
                 Menu {
-                    Picker("Select Currency", selection: $selectedCurrency) {
-                        ForEach(supportedCurrencies, id: \.self) { curr in
+                    Picker("Select Currency", selection: $viewModel.selectedCurrency) {
+                        ForEach(viewModel.supportedCurrencies, id: \.self) { curr in
                             Text(curr).tag(curr)
                         }
                     }
@@ -547,7 +525,7 @@ extension SettingsView {
                         subtitle: "Display currency for prices & metrics",
                         trailingContent: AnyView(
                             HStack(spacing: 4) {
-                                Text(selectedCurrency)
+                                Text(viewModel.selectedCurrency)
                                     .font(.system(size: 13, weight: .semibold))
                                     .foregroundStyle(Color.theme.accent)
                                 
@@ -597,10 +575,10 @@ extension SettingsView {
                     icon: "photo.stack.fill",
                     iconColor: Color.pink,
                     title: "Coin Icon Cache",
-                    subtitle: "\(cachedImageCount) icons stored on disk",
+                    subtitle: "\(viewModel.cachedImageCount) icons stored on disk",
                     trailingContent: AnyView(
                         Button {
-                            showClearCacheAlert = true
+                            viewModel.showClearCacheAlert = true
                         } label: {
                             Text("Clear")
                                 .font(.system(size: 12, weight: .bold))
@@ -624,7 +602,7 @@ extension SettingsView {
                     subtitle: "Restore balance to $10,000.00",
                     trailingContent: AnyView(
                         Button {
-                            showResetWalletAlert = true
+                            viewModel.showResetWalletAlert = true
                         } label: {
                             Text("Reset")
                                 .font(.system(size: 12, weight: .bold))
@@ -689,7 +667,7 @@ extension SettingsView {
                 
                 // Action Links
                 HStack(spacing: 10) {
-                    Link(destination: coingeckoURL) {
+                    Link(destination: viewModel.coingeckoURL) {
                         HStack(spacing: 6) {
                             Image(systemName: "globe")
                                 .font(.caption)
@@ -711,7 +689,7 @@ extension SettingsView {
                         .foregroundStyle(Color.theme.accent)
                     }
                     
-                    Link(destination: coingeckoApiURL) {
+                    Link(destination: viewModel.coingeckoApiURL) {
                         HStack(spacing: 6) {
                             Image(systemName: "curlybraces")
                                 .font(.caption)
@@ -880,19 +858,6 @@ extension SettingsView {
                 RoundedRectangle(cornerRadius: 16)
                     .stroke(Color.theme.secondaryText.opacity(0.10), lineWidth: 1)
             )
-    }
-    
-    private func showToast(_ text: String) {
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-            toastMessage = text
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
-            withAnimation(.easeInOut(duration: 0.25)) {
-                if toastMessage == text {
-                    toastMessage = nil
-                }
-            }
-        }
     }
     
     private func toastBanner(message: String) -> some View {

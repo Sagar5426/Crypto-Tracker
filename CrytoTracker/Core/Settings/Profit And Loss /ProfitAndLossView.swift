@@ -8,107 +8,23 @@
 import SwiftUI
 import SwiftfulUI
 
+@MainActor
 struct ProfitAndLossView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject private var vm: MarketViewModel
     
-    @State private var searchText: String = ""
+    // MARK: - View Model
+    @StateObject private var viewModel: ProfitAndLossViewModel
+    
+    // MARK: - Scroll & Geometry UI State
     @State private var scrollViewOffset: CGFloat = 0
     @State private var topSectionHeight: CGFloat = 220
-    @State private var isSpinning: Bool = false
-    @State private var selectedCoinForDetail: CoinModel? = nil
     
-    private var cryptoTransactions: [TransactionEntity] {
-        vm.transactions.filter {
-            let type = ($0.transactionType ?? "").uppercased()
-            return ($0.coinID ?? "") != "usd-cash" && (type == "BUY" || type == "SELL")
-        }
-    }
+    // MARK: - Initializer
     
-    private var allCoinPnLSummaries: [CoinPnLSummary] {
-        let summary = vm.realizedPnLSummary
-        
-        // Find all unique coin IDs from both transactions and current portfolio
-        var orderedCoinIDs: [String] = []
-        for tx in cryptoTransactions {
-            if let id = tx.coinID, !id.isEmpty, !orderedCoinIDs.contains(id) {
-                orderedCoinIDs.append(id)
-            }
-        }
-        for pCoin in vm.portfolioCoins where (pCoin.currentHoldings ?? 0) > 0 {
-            if !orderedCoinIDs.contains(pCoin.id) {
-                orderedCoinIDs.append(pCoin.id)
-            }
-        }
-        
-        return orderedCoinIDs.compactMap { coinID in
-            let coinTxs = cryptoTransactions.filter { $0.coinID == coinID }
-            let liveCoin = vm.allCoins.first { $0.id.lowercased() == coinID.lowercased() }
-            let portfolioCoin = vm.portfolioCoins.first { $0.id.lowercased() == coinID.lowercased() }
-            
-            let name = liveCoin?.name ?? coinTxs.first?.coinName ?? coinID.capitalized
-            let symbol = (liveCoin?.symbol ?? coinTxs.first?.coinSymbol ?? "").uppercased()
-            
-            // Realized metrics from vm.realizedPnLSummary
-            let coinRealizedTrades = summary.tradeDetails.values.filter { $0.coinID == coinID }
-            let realizedPnL = coinRealizedTrades.map { $0.realizedPnL }.reduce(0, +)
-            let realizedCostBasis = coinRealizedTrades.map { $0.costBasis }.reduce(0, +)
-            let realizedProceeds = coinRealizedTrades.map { $0.saleProceeds }.reduce(0, +)
-            let realizedQty = coinRealizedTrades.map { $0.sellAmount }.reduce(0, +)
-            let sellAvg = realizedQty > 0 ? (realizedProceeds / realizedQty) : 0.0
-            let realizedBuyAvg = realizedQty > 0 ? (realizedCostBasis / realizedQty) : 0.0
-            let realizedPct = realizedCostBasis > 0 ? (realizedPnL / realizedCostBasis) * 100.0 : 0.0
-            let closedCount = coinRealizedTrades.count
-            
-            // Unrealized metrics from portfolio / holdings
-            let holdings = portfolioCoin?.currentHoldings ?? 0.0
-            let hasOpenPos = holdings > 0.00000001
-            let curPrice = liveCoin?.currentPrice ?? portfolioCoin?.currentPrice ?? 0.0
-            let holdingsVal = hasOpenPos ? (portfolioCoin?.currentHoldingsValue ?? (holdings * curPrice)) : 0.0
-            let unCostBasis = hasOpenPos ? (portfolioCoin?.costBasis ?? (holdings * (portfolioCoin?.averageBuyPrice ?? curPrice))) : 0.0
-            let unPnL = hasOpenPos ? (portfolioCoin?.profitLoss ?? (holdingsVal - unCostBasis)) : 0.0
-            let unPct = hasOpenPos ? (portfolioCoin?.profitLossPercentage ?? (unCostBasis > 0 ? (unPnL / unCostBasis) * 100.0 : 0.0)) : 0.0
-            let buyAvg = hasOpenPos ? (portfolioCoin?.averageBuyPrice ?? (holdings > 0 ? unCostBasis / holdings : curPrice)) : 0.0
-            
-            // Exclude coins with zero realized and zero open position
-            guard closedCount > 0 || hasOpenPos else {
-                return nil
-            }
-            
-            return CoinPnLSummary(
-                coinID: coinID,
-                coinName: name,
-                coinSymbol: symbol,
-                coinModel: liveCoin ?? portfolioCoin,
-                totalRealizedPnL: realizedPnL,
-                totalRealizedPercentage: realizedPct,
-                totalRealizedCostBasis: realizedCostBasis,
-                totalRealizedProceeds: realizedProceeds,
-                totalRealizedQty: realizedQty,
-                realizedBuyAvgPrice: realizedBuyAvg,
-                sellAvgPrice: sellAvg,
-                closedTradesCount: closedCount,
-                currentHoldings: holdings,
-                currentPrice: curPrice,
-                unrealizedCostBasis: unCostBasis,
-                currentHoldingsValue: holdingsVal,
-                unrealizedPnL: unPnL,
-                unrealizedPercentage: unPct,
-                buyAvgPrice: buyAvg,
-                hasOpenPosition: hasOpenPos
-            )
-        }
-    }
-    
-    private var filteredCoinPnLList: [CoinPnLSummary] {
-        let trimmed = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return allCoinPnLSummaries }
-        let lower = trimmed.lowercased()
-        return allCoinPnLSummaries.filter {
-            $0.coinName.lowercased().contains(lower) ||
-            $0.coinSymbol.lowercased().contains(lower)
-        }
+    init(viewModel: ProfitAndLossViewModel? = nil) {
+        self._viewModel = StateObject(wrappedValue: viewModel ?? ProfitAndLossViewModel())
     }
     
     var body: some View {
@@ -128,7 +44,7 @@ struct ProfitAndLossView: View {
                             .opacity(headerBackgroundOpacity)
                     )
                 
-                if allCoinPnLSummaries.isEmpty {
+                if viewModel.allCoinPnLSummaries.isEmpty {
                     emptyStateView
                         .padding(.horizontal)
                 } else {
@@ -138,7 +54,10 @@ struct ProfitAndLossView: View {
             .ignoresSafeArea(edges: .bottom)
         }
         .toolbar(.hidden, for: .navigationBar)
-        .fullScreenCover(item: $selectedCoinForDetail) { coin in
+        .onAppear {
+            viewModel.setMarketViewModel(vm)
+        }
+        .fullScreenCover(item: $viewModel.selectedCoinForDetail) { coin in
             NavigationStack {
                 CoinDetailView(coin: coin)
             }
@@ -180,7 +99,7 @@ extension ProfitAndLossView {
     
     // MARK: - Ambient Gradient Layer (Moves synchronously with scroll & fades out together)
     private var backGroundGradientLayer: some View {
-        let isProfitable = (vm.realizedPnLSummary.totalRealizedPnL + vm.portfolioTotalProfitLoss) >= 0
+        let isProfitable = viewModel.isOverallProfitable
         let pnlColor = isProfitable ? Color.theme.green : Color.theme.red
         
         return ZStack {
@@ -228,7 +147,7 @@ extension ProfitAndLossView {
     
     // MARK: - Collapsible Metric Card Section
     private var collapsibleMetricSection: some View {
-        SummaryMetricCardView()
+        SummaryMetricCardView(viewModel: viewModel)
             .opacity(metricCardFadeOpacity)
             .scaleEffect(1.0 - (collapseProgress * 0.03), anchor: .top)
             .background(
@@ -273,19 +192,15 @@ extension ProfitAndLossView {
             Spacer()
             
             Button {
-                HapticManager.notification(type: .success)
-                withAnimation(.easeInOut(duration: 0.6)) {
-                    isSpinning.toggle()
-                }
-                vm.reloadData()
+                viewModel.refreshData()
             } label: {
                 Image(systemName: "arrow.clockwise")
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(Color.theme.accent)
-                    .rotationEffect(.degrees(vm.isLoading || isSpinning ? 360 : 0))
+                    .rotationEffect(.degrees(viewModel.isLoading || viewModel.isSpinning ? 360 : 0))
                     .animation(
-                        vm.isLoading ? .linear(duration: 1).repeatForever(autoreverses: false) : .default,
-                        value: vm.isLoading
+                        viewModel.isLoading ? .linear(duration: 1).repeatForever(autoreverses: false) : .default,
+                        value: viewModel.isLoading
                     )
                     .frame(width: 38, height: 38)
                     .background(
@@ -313,7 +228,7 @@ extension ProfitAndLossView {
                     
                     // Sticky Section: Search Bar sits below metricCard and sticks intact when scrolled
                     Section {
-                        if filteredCoinPnLList.isEmpty {
+                        if viewModel.filteredCoinPnLList.isEmpty {
                             filterEmptyStateView
                                 .zIndex(0)
                         } else {
@@ -334,14 +249,14 @@ extension ProfitAndLossView {
         )
         .scrollDismissesKeyboard(.interactively)
         .refreshable {
-            vm.reloadData()
+            viewModel.refreshData()
         }
     }
     
     // MARK: - Sticky Search Bar Row
     private var stickySearchBarRow: some View {
         VStack(spacing: 0) {
-            SearchBarView(searchText: $searchText)
+            SearchBarView(searchText: $viewModel.searchText)
                 .padding(.top, 4)
                 .padding(.bottom, 10)
             
@@ -360,10 +275,10 @@ extension ProfitAndLossView {
     // MARK: - Coins Lazy List
     private var coinsLazyList: some View {
         LazyVStack(spacing: 12) {
-            ForEach(filteredCoinPnLList) { coinPnL in
+            ForEach(viewModel.filteredCoinPnLList) { coinPnL in
                 if let coin = coinPnL.coinModel {
                     Button {
-                        selectedCoinForDetail = coin
+                        viewModel.selectedCoinForDetail = coin
                     } label: {
                         CoinTradeRowView(coinPnL: coinPnL)
                     }
@@ -375,64 +290,6 @@ extension ProfitAndLossView {
                 }
             }
         }
-    }
-}
-
-// MARK: - Coin P&L Summary Model
-struct CoinPnLSummary: Identifiable {
-    var id: String { coinID }
-    let coinID: String
-    let coinName: String
-    let coinSymbol: String
-    let coinModel: CoinModel?
-    
-    // Realized metrics
-    let totalRealizedPnL: Double
-    let totalRealizedPercentage: Double
-    let totalRealizedCostBasis: Double
-    let totalRealizedProceeds: Double
-    let totalRealizedQty: Double
-    let realizedBuyAvgPrice: Double
-    let sellAvgPrice: Double
-    let closedTradesCount: Int
-    
-    // Unrealized metrics
-    let currentHoldings: Double
-    let currentPrice: Double
-    let unrealizedCostBasis: Double
-    let currentHoldingsValue: Double
-    let unrealizedPnL: Double
-    let unrealizedPercentage: Double
-    let buyAvgPrice: Double
-    let hasOpenPosition: Bool
-    
-    var netPnL: Double {
-        totalRealizedPnL + (hasOpenPosition ? unrealizedPnL : 0.0)
-    }
-    
-    var netPercentage: Double {
-        let totalCost = totalRealizedCostBasis + (hasOpenPosition ? unrealizedCostBasis : 0.0)
-        return totalCost > 0 ? (netPnL / totalCost) * 100.0 : 0.0
-    }
-    
-    var hasRealizedActivity: Bool {
-        closedTradesCount > 0
-    }
-    
-    var hasUnrealizedActivity: Bool {
-        closedTradesCount <= 0
-    }
-    
-    var isNetProfitable: Bool {
-        netPnL >= 0
-    }
-    
-    var isRealizedProfitable: Bool {
-        totalRealizedPnL >= 0
-    }
-    
-    var isUnrealizedProfitable: Bool {
-        unrealizedPnL >= 0
     }
 }
 
@@ -481,7 +338,7 @@ extension ProfitAndLossView {
                 .fontWeight(.bold)
                 .foregroundStyle(Color.theme.accent)
             
-            Text("No coins matched '\(searchText)'.")
+            Text("No coins matched '\(viewModel.searchText)'.")
                 .font(.caption)
                 .foregroundStyle(Color.theme.secondaryText)
                 .multilineTextAlignment(.center)

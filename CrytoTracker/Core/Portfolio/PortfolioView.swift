@@ -8,37 +8,22 @@
 import SwiftUI
 import SwiftfulUI
 
+@MainActor
 struct PortfolioView: View {
     @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject private var vm: MarketViewModel
-    @State private var showManageSheet = false
-    @State private var selectedCoinToEdit: CoinModel? = nil
-    @State private var coinToDelete: CoinModel? = nil
-    @State private var showDeleteConfirmation = false
-    @State private var selectedCoinForDetail: CoinModel? = nil
-    @State private var showSearchBar: Bool = false
-    @State private var searchText: String = ""
+    
+    // MARK: - View Model
+    @StateObject private var viewModel: PortfolioViewModel
+    
+    // MARK: - Layout State
     @State private var scrollViewOffset: CGFloat = 0
     @State private var fullHeaderSize: CGSize = .zero
     
-    private var displayedPortfolioCoins: [CoinModel] {
-        if searchText.isEmpty {
-            return vm.portfolioCoins
-        } else {
-            let lower = searchText.lowercased()
-            return vm.portfolioCoins.filter {
-                $0.name.lowercased().contains(lower) ||
-                $0.symbol.lowercased().contains(lower)
-            }
-        }
-    }
+    // MARK: - Initializer
     
-    /// Dynamic PnL color to influence ambient aura based on portfolio performance
-    private var pnlColor: Color {
-        if vm.portfolioCoins.isEmpty {
-            return Color.theme.green
-        }
-        return vm.portfolioTotalProfitLoss >= 0 ? Color.theme.green : Color.theme.red
+    init(viewModel: PortfolioViewModel? = nil) {
+        self._viewModel = StateObject(wrappedValue: viewModel ?? PortfolioViewModel())
     }
     
     var body: some View {
@@ -58,26 +43,26 @@ struct PortfolioView: View {
                 stickyHeaderView
             }
             .toolbar(.hidden, for: .navigationBar)
-            .sheet(isPresented: $showManageSheet) {
+            .onAppear {
+                viewModel.setMarketViewModel(vm)
+            }
+            .sheet(isPresented: $viewModel.showManageSheet) {
                 ManagePortfolioView()
                     .environmentObject(vm)
             }
-            .sheet(item: $selectedCoinToEdit) { coin in
+            .sheet(item: $viewModel.selectedCoinToEdit) { coin in
                 ManagePortfolioView(selectedCoin: coin)
                     .environmentObject(vm)
             }
-            .alert("Remove Holding", isPresented: $showDeleteConfirmation, presenting: coinToDelete) { coin in
+            .alert("Remove Holding", isPresented: $viewModel.showDeleteConfirmation, presenting: viewModel.coinToDelete) { _ in
                 Button("Remove", role: .destructive) {
-                    withAnimation {
-                        vm.deleteHolding(coin: coin)
-                    }
-                    HapticManager.notification(type: .success)
+                    viewModel.confirmDeleteHolding()
                 }
                 Button("Cancel", role: .cancel) { }
             } message: { coin in
                 Text("Are you sure you want to remove \(coin.name) from your portfolio?")
             }
-            .fullScreenCover(item: $selectedCoinForDetail) { coin in
+            .fullScreenCover(item: $viewModel.selectedCoinForDetail) { coin in
                 NavigationStack {
                     CoinDetailView(coin: coin)
                 }
@@ -93,14 +78,14 @@ extension PortfolioView {
     private var stickyHeaderView: some View {
         HeaderView(
             title: "Portfolio",
-            showSearchBar: $showSearchBar,
-            searchText: $searchText,
-            isLoading: vm.isLoading,
+            showSearchBar: $viewModel.showSearchBar,
+            searchText: $viewModel.searchText,
+            isLoading: viewModel.isLoading,
             onRefresh: {
-                vm.reloadData()
+                viewModel.reloadData()
             },
             onAdd: {
-                showManageSheet.toggle()
+                viewModel.openManageSheet()
             }
         )
         .padding(.bottom, 8)
@@ -137,9 +122,9 @@ extension PortfolioView {
             // Multi-stop linear gradient for rich ambient background fade
             LinearGradient(
                 stops: [
-                    .init(color: (colorScheme == .dark ? Color.theme.accent.opacity(0.18) : pnlColor.opacity(0.08)), location: 0.0),
-                    .init(color: (colorScheme == .dark ? Color.theme.accent.opacity(0.08) : pnlColor.opacity(0.03)), location: 0.35),
-                    .init(color: pnlColor.opacity(0.05), location: 0.65),
+                    .init(color: (colorScheme == .dark ? Color.theme.accent.opacity(0.18) : viewModel.pnlColor.opacity(0.08)), location: 0.0),
+                    .init(color: (colorScheme == .dark ? Color.theme.accent.opacity(0.08) : viewModel.pnlColor.opacity(0.03)), location: 0.35),
+                    .init(color: viewModel.pnlColor.opacity(0.05), location: 0.65),
                     .init(color: Color.clear, location: 1.0)
                 ],
                 startPoint: .top,
@@ -149,8 +134,8 @@ extension PortfolioView {
             // Soft ambient P&L aura on top-trailing
             RadialGradient(
                 gradient: Gradient(colors: [
-                    pnlColor.opacity(colorScheme == .dark ? 0.14 : 0.08),
-                    pnlColor.opacity(colorScheme == .dark ? 0.04 : 0.02),
+                    viewModel.pnlColor.opacity(colorScheme == .dark ? 0.14 : 0.08),
+                    viewModel.pnlColor.opacity(colorScheme == .dark ? 0.04 : 0.02),
                     Color.clear
                 ]),
                 center: .topTrailing,
@@ -190,15 +175,15 @@ extension PortfolioView {
                         .frame(height: max(50, fullHeaderSize.height))
                     
                     PortfolioSummaryCard(onAddTapped: {
-                        showManageSheet.toggle()
+                        viewModel.openManageSheet()
                     })
                     
-                    if vm.portfolioCoins.isEmpty {
+                    if viewModel.portfolioCoins.isEmpty {
                         portfolioEmptyState
                             .padding(.top, 20)
                     } else {
                         holdingsHeader
-                        if displayedPortfolioCoins.isEmpty && !searchText.isEmpty {
+                        if viewModel.displayedPortfolioCoins.isEmpty && !viewModel.searchText.isEmpty {
                             noResultsView
                         } else {
                             holdingsList
@@ -212,7 +197,7 @@ extension PortfolioView {
             }
         )
         .refreshable {
-            vm.reloadData()
+            viewModel.reloadData()
         }
     }
 }
@@ -222,7 +207,7 @@ extension PortfolioView {
     
     private var holdingsHeader: some View {
         HStack {
-            Text("Your Assets (\(displayedPortfolioCoins.count))")
+            Text("Your Assets (\(viewModel.displayedPortfolioCoins.count))")
                 .font(.headline)
                 .fontWeight(.bold)
                 .foregroundStyle(Color.theme.accent)
@@ -240,9 +225,9 @@ extension PortfolioView {
     
     private var holdingsList: some View {
         LazyVStack(spacing: 8) {
-            ForEach(displayedPortfolioCoins) { coin in
+            ForEach(viewModel.displayedPortfolioCoins) { coin in
                 Button {
-                    selectedCoinForDetail = coin
+                    viewModel.selectCoinForDetail(coin)
                 } label: {
                     PortfolioCoinRowView(coin: coin)
                         .padding(.horizontal, 12)
@@ -261,14 +246,13 @@ extension PortfolioView {
                 .padding(.horizontal)
                 .contextMenu {
                     Button {
-                        selectedCoinToEdit = coin
+                        viewModel.editHolding(for: coin)
                     } label: {
                         Label("Edit Holdings", systemImage: "pencil")
                     }
                     
                     Button(role: .destructive) {
-                        coinToDelete = coin
-                        showDeleteConfirmation = true
+                        viewModel.promptDelete(for: coin)
                     } label: {
                         Label("Remove Holding", systemImage: "trash")
                     }
@@ -284,7 +268,7 @@ extension PortfolioView {
                 .foregroundStyle(Color.theme.secondaryText)
                 .padding(.top, 24)
             
-            Text("No holdings for \"\(searchText)\"")
+            Text("No holdings for \"\(viewModel.searchText)\"")
                 .font(.headline)
                 .foregroundStyle(Color.theme.accent)
             
@@ -321,7 +305,7 @@ extension PortfolioView {
                 .padding(.horizontal, 36)
             
             Button {
-                showManageSheet.toggle()
+                viewModel.openManageSheet()
             } label: {
                 HStack(spacing: 8) {
                     Image(systemName: "plus.circle.fill")

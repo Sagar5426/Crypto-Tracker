@@ -7,48 +7,21 @@
 
 import SwiftUI
 
+@MainActor
 struct CashWalletView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var vm: MarketViewModel
     
-    @State private var selectedMode: WalletAction = .deposit
-    @State private var amountText: String = ""
-    @State private var showSuccessMessage: Bool = false
-    @State private var successDescription: String = ""
-    @State private var showResetConfirmation: Bool = false
+    // MARK: - View Model
+    @StateObject private var viewModel: CashWalletViewModel
     
-    enum WalletAction: String, CaseIterable, Identifiable {
-        case deposit = "Deposit"
-        case withdraw = "Withdraw"
-        var id: String { rawValue }
-    }
+    // Backward compatibility typealias
+    typealias WalletAction = CashWalletViewModel.WalletAction
     
-    private var enteredAmount: Double {
-        Double(amountText) ?? 0.0
-    }
+    // MARK: - Initializer
     
-    private var projectedBalance: Double {
-        switch selectedMode {
-        case .deposit:
-            return vm.cashBalance + enteredAmount
-        case .withdraw:
-            return max(0, vm.cashBalance - enteredAmount)
-        }
-    }
-    
-    private var isInsufficientWithdrawal: Bool {
-        selectedMode == .withdraw && enteredAmount > vm.cashBalance
-    }
-    
-    private var canExecuteAction: Bool {
-        enteredAmount > 0 && !isInsufficientWithdrawal
-    }
-    
-    private var cashTransactions: [TransactionEntity] {
-        vm.transactions.filter {
-            let type = ($0.transactionType ?? "").uppercased()
-            return type == "DEPOSIT" || type == "WITHDRAW"
-        }
+    init(viewModel: CashWalletViewModel? = nil) {
+        self._viewModel = StateObject(wrappedValue: viewModel ?? CashWalletViewModel())
     }
     
     var body: some View {
@@ -69,9 +42,8 @@ struct CashWalletView: View {
                 // Action Button
                 executeActionButton
                 
-                
                 // Cash Activity History
-                if !cashTransactions.isEmpty {
+                if !viewModel.cashTransactions.isEmpty {
                     cashActivitySection
                 }
             }
@@ -79,6 +51,9 @@ struct CashWalletView: View {
         }
         .navigationTitle("USD Cash Wallet")
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            viewModel.setMarketViewModel(vm)
+        }
     }
 }
 
@@ -98,7 +73,7 @@ extension CashWalletView {
                             .foregroundStyle(Color.theme.secondaryText)
                     }
                     
-                    Text(vm.cashBalance.asCurrencyWith2Decimals())
+                    Text(viewModel.cashBalance.asCurrencyWith2Decimals())
                         .font(.system(size: 34, weight: .bold, design: .rounded))
                         .foregroundStyle(Color.theme.accent)
                         .contentTransition(.numericText())
@@ -156,11 +131,7 @@ extension CashWalletView {
     private var actionPicker: some View {
         HStack(spacing: 10) {
             Button {
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    selectedMode = .deposit
-                    amountText = ""
-                }
-                HapticManager.notification(type: .success)
+                viewModel.selectMode(.deposit)
             } label: {
                 HStack(spacing: 6) {
                     Image(systemName: "arrow.down.circle.fill")
@@ -172,18 +143,14 @@ extension CashWalletView {
                 .padding(.vertical, 12)
                 .background(
                     RoundedRectangle(cornerRadius: 12)
-                        .fill(selectedMode == .deposit ? Color.theme.green.opacity(0.8) : Color.theme.secondaryText.opacity(0.1))
+                        .fill(viewModel.selectedMode == .deposit ? Color.theme.green.opacity(0.8) : Color.theme.secondaryText.opacity(0.1))
                 )
-                .foregroundStyle(selectedMode == .deposit ? Color.white : Color.theme.secondaryText)
+                .foregroundStyle(viewModel.selectedMode == .deposit ? Color.white : Color.theme.secondaryText)
             }
             .buttonStyle(.plain)
             
             Button {
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    selectedMode = .withdraw
-                    amountText = ""
-                }
-                HapticManager.notification(type: .success)
+                viewModel.selectMode(.withdraw)
             } label: {
                 HStack(spacing: 6) {
                     Image(systemName: "arrow.up.circle.fill")
@@ -195,9 +162,9 @@ extension CashWalletView {
                 .padding(.vertical, 12)
                 .background(
                     RoundedRectangle(cornerRadius: 12)
-                        .fill(selectedMode == .withdraw ? Color.theme.red : Color.theme.secondaryText.opacity(0.1))
+                        .fill(viewModel.selectedMode == .withdraw ? Color.theme.red : Color.theme.secondaryText.opacity(0.1))
                 )
-                .foregroundStyle(selectedMode == .withdraw ? Color.white : Color.theme.secondaryText)
+                .foregroundStyle(viewModel.selectedMode == .withdraw ? Color.white : Color.theme.secondaryText)
             }
             .buttonStyle(.plain)
         }
@@ -205,7 +172,7 @@ extension CashWalletView {
     
     private var amountInputCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(selectedMode == .deposit ? "Enter Deposit Amount" : "Enter Withdrawal Amount")
+            Text(viewModel.selectedMode == .deposit ? "Enter Deposit Amount" : "Enter Withdrawal Amount")
                 .font(.caption)
                 .fontWeight(.bold)
                 .foregroundStyle(Color.theme.secondaryText)
@@ -215,13 +182,13 @@ extension CashWalletView {
                     .font(.system(size: 28, weight: .bold, design: .rounded))
                     .foregroundStyle(Color.theme.secondaryText)
                 
-                TextField("0.00", text: $amountText)
+                TextField("0.00", text: $viewModel.amountText)
                     .font(.system(size: 28, weight: .bold, design: .rounded))
                     .keyboardType(.decimalPad)
                 
-                if !amountText.isEmpty {
+                if !viewModel.amountText.isEmpty {
                     Button {
-                        amountText = ""
+                        viewModel.clearAmount()
                     } label: {
                         Image(systemName: "xmark.circle.fill")
                             .font(.title3)
@@ -236,12 +203,11 @@ extension CashWalletView {
             )
             
             // Quick preset pills
-            if selectedMode == .deposit {
+            if viewModel.selectedMode == .deposit {
                 HStack(spacing: 8) {
-                    ForEach([500.0, 1000.0, 5000.0, 10000.0], id: \.self) { preset in
+                    ForEach(viewModel.depositPresets, id: \.self) { preset in
                         Button {
-                            amountText = String(format: "%.0f", preset)
-                            HapticManager.notification(type: .success)
+                            viewModel.applyDepositPreset(preset)
                         } label: {
                             Text("+$\(Int(preset))")
                                 .font(.caption2)
@@ -258,12 +224,10 @@ extension CashWalletView {
                 .padding(.top, 2)
             } else {
                 HStack(spacing: 8) {
-                    ForEach([0.25, 0.50, 0.75, 1.0], id: \.self) { fraction in
+                    ForEach(viewModel.withdrawalFractions, id: \.self) { fraction in
                         let title = fraction == 1.0 ? "100% MAX" : "\(Int(fraction * 100))%"
                         Button {
-                            let calculated = vm.cashBalance * fraction
-                            amountText = String(format: "%.2f", calculated)
-                            HapticManager.notification(type: .success)
+                            viewModel.applyWithdrawalFraction(fraction)
                         } label: {
                             Text(title)
                                 .font(.caption2)
@@ -294,11 +258,11 @@ extension CashWalletView {
     
     private var projectedBalanceCard: some View {
         VStack(spacing: 10) {
-            if isInsufficientWithdrawal {
+            if viewModel.isInsufficientWithdrawal {
                 HStack(spacing: 6) {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .foregroundStyle(Color.theme.red)
-                    Text("Cannot withdraw more than available cash (\(vm.cashBalance.asCurrencyWith2Decimals())).")
+                    Text("Cannot withdraw more than available cash (\(viewModel.cashBalance.asCurrencyWith2Decimals())).")
                         .font(.caption)
                         .fontWeight(.semibold)
                         .foregroundStyle(Color.theme.red)
@@ -314,7 +278,7 @@ extension CashWalletView {
                     .font(.caption)
                     .foregroundStyle(Color.theme.secondaryText)
                 Spacer()
-                Text(vm.cashBalance.asCurrencyWith2Decimals())
+                Text(viewModel.cashBalance.asCurrencyWith2Decimals())
                     .font(.caption)
                     .fontWeight(.semibold)
                     .foregroundStyle(Color.theme.accent)
@@ -323,14 +287,14 @@ extension CashWalletView {
             Divider()
             
             HStack {
-                Text(selectedMode == .deposit ? "Amount to Add" : "Amount to Withdraw")
+                Text(viewModel.selectedMode == .deposit ? "Amount to Add" : "Amount to Withdraw")
                     .font(.caption)
                     .foregroundStyle(Color.theme.secondaryText)
                 Spacer()
-                Text((selectedMode == .deposit ? "+$" : "-$") + String(format: "%.2f", enteredAmount))
+                Text((viewModel.selectedMode == .deposit ? "+$" : "-$") + String(format: "%.2f", viewModel.enteredAmount))
                     .font(.caption)
                     .fontWeight(.bold)
-                    .foregroundStyle(selectedMode == .deposit ? Color.theme.green : Color.theme.red)
+                    .foregroundStyle(viewModel.selectedMode == .deposit ? Color.theme.green : Color.theme.red)
             }
             
             Divider()
@@ -341,7 +305,7 @@ extension CashWalletView {
                     .fontWeight(.bold)
                     .foregroundStyle(Color.theme.accent)
                 Spacer()
-                Text(projectedBalance.asCurrencyWith2Decimals())
+                Text(viewModel.projectedBalance.asCurrencyWith2Decimals())
                     .font(.subheadline)
                     .fontWeight(.bold)
                     .foregroundStyle(Color.theme.accent)
@@ -355,22 +319,22 @@ extension CashWalletView {
         )
         .overlay(
             RoundedRectangle(cornerRadius: 16)
-                .stroke(isInsufficientWithdrawal ? Color.theme.red.opacity(0.4) : Color.theme.secondaryText.opacity(0.1), lineWidth: 1)
+                .stroke(viewModel.isInsufficientWithdrawal ? Color.theme.red.opacity(0.4) : Color.theme.secondaryText.opacity(0.1), lineWidth: 1)
         )
     }
     
     private var executeActionButton: some View {
-        let isDeposit = selectedMode == .deposit
+        let isDeposit = viewModel.selectedMode == .deposit
         let actionColor = isDeposit ? Color.theme.green.opacity(0.8) : Color.theme.red.opacity(0.8)
-        let title = isDeposit ? "Confirm Deposit of $\(String(format: "%.2f", enteredAmount))" : "Confirm Withdrawal of $\(String(format: "%.2f", enteredAmount))"
+        let title = isDeposit ? "Confirm Deposit of $\(String(format: "%.2f", viewModel.enteredAmount))" : "Confirm Withdrawal of $\(String(format: "%.2f", viewModel.enteredAmount))"
         
         return Button {
-            executeWalletAction()
+            viewModel.executeWalletAction()
         } label: {
             HStack(spacing: 8) {
-                if showSuccessMessage {
+                if viewModel.showSuccessMessage {
                     Image(systemName: "checkmark.circle.fill")
-                    Text(successDescription)
+                    Text(viewModel.successDescription)
                 } else {
                     Image(systemName: isDeposit ? "arrow.down.circle.fill" : "arrow.up.circle.fill")
                     Text(title)
@@ -380,16 +344,14 @@ extension CashWalletView {
             .fontWeight(.bold)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 14)
-            .background(canExecuteAction ? actionColor : Color.theme.secondaryText.opacity(0.2))
-            .foregroundStyle(canExecuteAction ? Color.white : Color.theme.secondaryText)
+            .background(viewModel.canExecuteAction ? actionColor : Color.theme.secondaryText.opacity(0.2))
+            .foregroundStyle(viewModel.canExecuteAction ? Color.white : Color.theme.secondaryText)
             .clipShape(RoundedRectangle(cornerRadius: 14))
-            .shadow(color: canExecuteAction ? actionColor.opacity(0.3) : Color.clear, radius: 8, x: 0, y: 4)
+            .shadow(color: viewModel.canExecuteAction ? actionColor.opacity(0.3) : Color.clear, radius: 8, x: 0, y: 4)
         }
-        .disabled(!canExecuteAction || showSuccessMessage)
+        .disabled(!viewModel.canExecuteAction || viewModel.showSuccessMessage)
         .buttonStyle(.plain)
     }
-    
-   
     
     private var cashActivitySection: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -399,13 +361,13 @@ extension CashWalletView {
                     .fontWeight(.bold)
                     .foregroundStyle(Color.theme.secondaryText)
                 Spacer()
-                Text("\(cashTransactions.count) records")
+                Text("\(viewModel.cashTransactions.count) records")
                     .font(.caption2)
                     .foregroundStyle(Color.theme.secondaryText)
             }
             
             VStack(spacing: 8) {
-                ForEach(cashTransactions.prefix(5), id: \.id) { tx in
+                ForEach(viewModel.cashTransactions.prefix(5), id: \.id) { tx in
                     let isDeposit = (tx.transactionType ?? "").uppercased() == "DEPOSIT"
                     HStack {
                         HStack(spacing: 8) {
@@ -439,7 +401,7 @@ extension CashWalletView {
                     }
                     .padding(.vertical, 4)
                     
-                    if tx.id != cashTransactions.prefix(5).last?.id {
+                    if tx.id != viewModel.cashTransactions.prefix(5).last?.id {
                         Divider()
                     }
                 }
@@ -455,33 +417,6 @@ extension CashWalletView {
             )
         }
         .padding(.top, 8)
-    }
-    
-    private func executeWalletAction() {
-        guard enteredAmount > 0 else { return }
-        
-        switch selectedMode {
-        case .deposit:
-            vm.depositCash(amount: enteredAmount)
-            successDescription = "Deposited $\(String(format: "%.2f", enteredAmount))!"
-        case .withdraw:
-            let success = vm.withdrawCash(amount: enteredAmount)
-            guard success else { return }
-            successDescription = "Withdrawn $\(String(format: "%.2f", enteredAmount))!"
-        }
-        
-        withAnimation(.easeIn) {
-            showSuccessMessage = true
-        }
-        HapticManager.notification(type: .success)
-        UIApplication.shared.endEditing()
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
-            withAnimation {
-                showSuccessMessage = false
-                amountText = ""
-            }
-        }
     }
 }
 

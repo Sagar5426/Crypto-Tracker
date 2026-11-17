@@ -10,99 +10,26 @@ import SwiftUI
 struct ManagePortfolioView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
-    @EnvironmentObject private var vm: MarketViewModel
+    @EnvironmentObject private var marketVM: MarketViewModel
     
-    // Initializer context
-    private let initialCoin: CoinModel?
-    private let initialTradeType: TransactionType
+    // MARK: - View Model
+    @StateObject private var viewModel: ManagePortfolioViewModel
     
-    // State
-    @State private var activeCoin: CoinModel?
-    @State private var selectedTab: PortfolioTab = .myHoldings
-    @State private var searchText: String = ""
-    @State private var filterCategory: AssetCategory = .all
+    // MARK: - UI Animation Namespaces
     @Namespace private var portfolioTabNamespace
-    
-    // Trade Studio State
     @Namespace private var tradeToggleNamespace
-    @State private var tradeType: TransactionType = .buy
-    @State private var inputMode: InputMode = .fiat
-    @State private var quantityText: String = ""
-    @State private var fiatText: String = ""
-    @State private var orderExecuted: Bool = false
-    @State private var coinToDelete: CoinModel? = nil
-    @State private var showDeleteConfirmation: Bool = false
     
-    enum PortfolioTab: String, CaseIterable, Identifiable {
-        case myHoldings = "My Holdings"
-        case addAsset = "Explore All"
-        var id: String { rawValue }
-    }
-    
-    enum InputMode: String, CaseIterable, Identifiable {
-        case fiat = "USD ($)"
-        case token = "Coins"
-        var id: String { rawValue }
-    }
-    
-    enum AssetCategory: String, CaseIterable, Identifiable {
-        case all = "All"
-        case top10 = "Top 10"
-        case gainers = "Gainers"
-        case losers = "Losers"
-        var id: String { rawValue }
-    }
+    // MARK: - Initializers
     
     init(selectedCoin: CoinModel? = nil, initialTradeType: TransactionType = .buy) {
-        self.initialCoin = selectedCoin
-        self.initialTradeType = initialTradeType
-        self._activeCoin = State(initialValue: selectedCoin)
-        self._tradeType = State(initialValue: initialTradeType)
+        self._viewModel = StateObject(wrappedValue: ManagePortfolioViewModel(
+            initialCoin: selectedCoin,
+            initialTradeType: initialTradeType
+        ))
     }
     
-    // MARK: - Computed Properties
-    
-    private var filteredHoldings: [CoinModel] {
-        if searchText.isEmpty {
-            return vm.portfolioCoins
-        } else {
-            let lower = searchText.lowercased()
-            return vm.portfolioCoins.filter {
-                $0.name.lowercased().contains(lower) ||
-                $0.symbol.lowercased().contains(lower)
-            }
-        }
-    }
-    
-    private var filteredAllCoins: [CoinModel] {
-        var coins = vm.allCoins
-        
-        switch filterCategory {
-        case .all:
-            break
-        case .top10:
-            coins = Array(coins.prefix(10))
-        case .gainers:
-            coins = coins.filter { ($0.priceChangePercentage24H ?? 0) > 0 }
-                         .sorted(by: { ($0.priceChangePercentage24H ?? 0) > ($1.priceChangePercentage24H ?? 0) })
-        case .losers:
-            coins = coins.filter { ($0.priceChangePercentage24H ?? 0) < 0 }
-                         .sorted(by: { ($0.priceChangePercentage24H ?? 0) < ($1.priceChangePercentage24H ?? 0) })
-        }
-        
-        if !searchText.isEmpty {
-            let lower = searchText.lowercased()
-            coins = coins.filter {
-                $0.name.lowercased().contains(lower) ||
-                $0.symbol.lowercased().contains(lower)
-            }
-        }
-        
-        return coins
-    }
-    
-    private var themeColor: Color {
-        tradeType == .buy ? Color.theme.green.opacity(0.8) : Color.theme.red
+    init(viewModel: ManagePortfolioViewModel) {
+        self._viewModel = StateObject(wrappedValue: viewModel)
     }
     
     // MARK: - Body
@@ -116,7 +43,7 @@ struct ManagePortfolioView: View {
                 // Ambient glow layer that dynamically adjusts based on mode & buy/sell
                 ambientGlowLayer
                 
-                if let coin = activeCoin {
+                if let coin = viewModel.activeCoin {
                     tradeStudioView(coin: coin)
                         .transition(.asymmetric(
                             insertion: .move(edge: .trailing).combined(with: .opacity),
@@ -130,17 +57,21 @@ struct ManagePortfolioView: View {
                         ))
                 }
             }
-            .animation(.spring(response: 0.35, dampingFraction: 0.8), value: activeCoin?.id)
-            .animation(.easeInOut(duration: 0.25), value: tradeType)
-            .alert("Remove Holding", isPresented: $showDeleteConfirmation, presenting: coinToDelete) { coin in
+            .animation(.spring(response: 0.35, dampingFraction: 0.8), value: viewModel.activeCoin?.id)
+            .animation(.easeInOut(duration: 0.25), value: viewModel.tradeType)
+            .onAppear {
+                viewModel.setMarketViewModel(marketVM)
+            }
+            .onChange(of: viewModel.shouldDismiss) { _, shouldDismiss in
+                if shouldDismiss {
+                    dismiss()
+                }
+            }
+            .alert("Remove Holding", isPresented: $viewModel.showDeleteConfirmation, presenting: viewModel.coinToDelete) { coin in
                 Button("Remove", role: .destructive) {
                     withAnimation {
-                        vm.deleteHolding(coin: coin)
-                        if activeCoin?.id == coin.id {
-                            activeCoin = nil
-                        }
+                        viewModel.deleteHoldingConfirmed()
                     }
-                    HapticManager.notification(type: .success)
                 }
                 Button("Cancel", role: .cancel) { }
             } message: { coin in
@@ -154,7 +85,7 @@ struct ManagePortfolioView: View {
 extension ManagePortfolioView {
     
     private var ambientGlowLayer: some View {
-        let activeColor = activeCoin != nil ? themeColor : (colorScheme == .dark ? Color.theme.accent : Color.theme.green)
+        let activeColor = viewModel.activeCoin != nil ? viewModel.themeColor : (colorScheme == .dark ? Color.theme.accent : Color.theme.green)
         
         return ZStack {
             LinearGradient(
@@ -198,16 +129,16 @@ extension ManagePortfolioView {
             portfolioModeToggle
             
             // Search Bar
-            SearchBarView(searchText: $searchText)
+            SearchBarView(searchText: $viewModel.searchText)
                 .padding(.vertical, -4)
             
             // Category Filter Pills (Explore tab only)
-            if selectedTab == .addAsset {
+            if viewModel.selectedTab == .addAsset {
                 categoryPillsBar
             }
             
             // Content
-            if selectedTab == .myHoldings {
+            if viewModel.selectedTab == .myHoldings {
                 holdingsTabContent
             } else {
                 addAssetTabContent
@@ -262,7 +193,7 @@ extension ManagePortfolioView {
                         .foregroundStyle(Color.theme.secondaryText)
                 }
                 
-                Text(vm.cashBalance.asCurrencyWith2Decimals())
+                Text(viewModel.cashBalance.asCurrencyWith2Decimals())
                     .font(.system(size: 16, weight: .bold, design: .rounded))
                     .foregroundStyle(Color.theme.green)
                     .lineLimit(1)
@@ -285,7 +216,7 @@ extension ManagePortfolioView {
                         .foregroundStyle(Color.theme.secondaryText)
                 }
                 
-                Text(vm.portfolioTotalValue.asCurrencyWith2Decimals())
+                Text(viewModel.portfolioTotalValue.asCurrencyWith2Decimals())
                     .font(.system(size: 16, weight: .bold, design: .rounded))
                     .foregroundStyle(Color.theme.accent)
                     .lineLimit(1)
@@ -309,14 +240,14 @@ extension ManagePortfolioView {
     // MARK: - Custom Mode Selector Toggle (My Holdings vs Explore All)
     private var portfolioModeToggle: some View {
         HStack(spacing: 6) {
-            ForEach(PortfolioTab.allCases) { tab in
-                let isSelected = selectedTab == tab
-                let count = tab == .myHoldings ? vm.portfolioCoins.count : vm.allCoins.count
+            ForEach(ManagePortfolioViewModel.PortfolioTab.allCases) { tab in
+                let isSelected = viewModel.selectedTab == tab
+                let count = tab == .myHoldings ? viewModel.portfolioCoins.count : viewModel.allCoins.count
                 let icon = tab == .myHoldings ? "briefcase.fill" : "globe"
                 
                 Button {
                     withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
-                        selectedTab = tab
+                        viewModel.selectedTab = tab
                     }
                     HapticManager.selection()
                 } label: {
@@ -368,10 +299,10 @@ extension ManagePortfolioView {
     private var categoryPillsBar: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
-                ForEach(AssetCategory.allCases) { category in
+                ForEach(ManagePortfolioViewModel.AssetCategory.allCases) { category in
                     Button {
                         withAnimation(.easeInOut(duration: 0.2)) {
-                            filterCategory = category
+                            viewModel.filterCategory = category
                         }
                         HapticManager.selection()
                     } label: {
@@ -381,9 +312,9 @@ extension ManagePortfolioView {
                             .padding(.vertical, 6)
                             .background(
                                 Capsule()
-                                    .fill(filterCategory == category ? Color.theme.accent : Color.theme.secondaryText.opacity(0.08))
+                                    .fill(viewModel.filterCategory == category ? Color.theme.accent : Color.theme.secondaryText.opacity(0.08))
                             )
-                            .foregroundStyle(filterCategory == category ? Color.theme.background : Color.theme.secondaryText)
+                            .foregroundStyle(viewModel.filterCategory == category ? Color.theme.background : Color.theme.secondaryText)
                     }
                     .buttonStyle(.plain)
                 }
@@ -395,12 +326,12 @@ extension ManagePortfolioView {
     // MARK: - Holdings List
     private var holdingsTabContent: some View {
         Group {
-            if vm.portfolioCoins.isEmpty {
+            if viewModel.portfolioCoins.isEmpty {
                 emptyHoldingsState
             } else {
                 ScrollView {
                     LazyVStack(spacing: 10) {
-                        ForEach(filteredHoldings) { coin in
+                        ForEach(viewModel.filteredHoldings) { coin in
                             holdingListCard(coin: coin)
                         }
                     }
@@ -458,7 +389,7 @@ extension ManagePortfolioView {
                     HStack(spacing: 4) {
                         Image(systemName: "chart.pie.fill")
                             .font(.system(size: 10))
-                        Text(String(format: "%.1f%% Share", vm.portfolioShare(for: coin)))
+                        Text(String(format: "%.1f%% Share", viewModel.portfolioShare(for: coin)))
                             .font(.system(size: 11, weight: .bold))
                     }
                     .padding(.horizontal, 8)
@@ -482,7 +413,7 @@ extension ManagePortfolioView {
                 // Trade Action Chips: Buy & Sell Buttons
                 HStack(spacing: 8) {
                     Button {
-                        openTradeStudio(for: coin, type: .buy)
+                        viewModel.openTradeStudio(for: coin, type: .buy)
                     } label: {
                         HStack(spacing: 4) {
                             Image(systemName: "arrow.down.left")
@@ -499,7 +430,7 @@ extension ManagePortfolioView {
                     .buttonStyle(.plain)
                     
                     Button {
-                        openTradeStudio(for: coin, type: .sell)
+                        viewModel.openTradeStudio(for: coin, type: .sell)
                     } label: {
                         HStack(spacing: 4) {
                             Image(systemName: "arrow.up.right")
@@ -529,20 +460,19 @@ extension ManagePortfolioView {
         )
         .contextMenu {
             Button {
-                openTradeStudio(for: coin, type: .buy)
+                viewModel.openTradeStudio(for: coin, type: .buy)
             } label: {
                 Label("Buy \(coin.symbol.uppercased())", systemImage: "plus.circle")
             }
             
             Button {
-                openTradeStudio(for: coin, type: .sell)
+                viewModel.openTradeStudio(for: coin, type: .sell)
             } label: {
                 Label("Sell \(coin.symbol.uppercased())", systemImage: "minus.circle")
             }
             
             Button(role: .destructive) {
-                coinToDelete = coin
-                showDeleteConfirmation = true
+                viewModel.requestDeleteHolding(coin)
             } label: {
                 Label("Remove Holding", systemImage: "trash")
             }
@@ -575,7 +505,7 @@ extension ManagePortfolioView {
             
             Button {
                 withAnimation {
-                    selectedTab = .addAsset
+                    viewModel.selectedTab = .addAsset
                 }
             } label: {
                 HStack(spacing: 6) {
@@ -601,8 +531,8 @@ extension ManagePortfolioView {
     private var addAssetTabContent: some View {
         ScrollView {
             LazyVStack(spacing: 8) {
-                ForEach(filteredAllCoins) { coin in
-                    let isHeld = vm.portfolioCoins.contains(where: { $0.id == coin.id })
+                ForEach(viewModel.filteredAllCoins) { coin in
+                    let isHeld = viewModel.isHeld(coin: coin)
                     
                     HStack(spacing: 12) {
                         Text("\(coin.rank)")
@@ -637,7 +567,7 @@ extension ManagePortfolioView {
                         }
                         
                         Button {
-                            openTradeStudio(for: coin, type: .buy)
+                            viewModel.openTradeStudio(for: coin, type: .buy)
                         } label: {
                             HStack(spacing: 4) {
                                 Image(systemName: isHeld ? "arrow.left.arrow.right" : "plus")
@@ -676,21 +606,7 @@ extension ManagePortfolioView {
 extension ManagePortfolioView {
     
     private func tradeStudioView(coin: CoinModel) -> some View {
-        let currentHolding = vm.portfolioCoins.first(where: { $0.id == coin.id })?.currentHoldings ?? 0
-        let currentInvested = vm.portfolioCoins.first(where: { $0.id == coin.id })?.investedAmount ?? (currentHolding * coin.currentPrice)
-        let currentHoldingValue = currentHolding * coin.currentPrice
-        
-        let tradeAmount = Double(quantityText) ?? 0
-        let totalOrderValue = tradeAmount * coin.currentPrice
-        let resultingHolding = tradeType == .buy ? (currentHolding + tradeAmount) : max(0, currentHolding - tradeAmount)
-        
-        let isInsufficientBalance = tradeType == .sell && tradeAmount > currentHolding
-        let isInsufficientCash = tradeType == .buy && totalOrderValue > vm.cashBalance
-        let canExecuteOrder = tradeAmount > 0 && !isInsufficientBalance && !isInsufficientCash
-        
-        let coinHistory = vm.transactions(for: coin.id)
-        
-        return ScrollView {
+        ScrollView {
             VStack(spacing: 16) {
                 // Top Custom Studio Bar
                 tradeStudioHeaderBar(coin: coin)
@@ -699,44 +615,23 @@ extension ManagePortfolioView {
                 buySellMasterToggle
                 
                 // Live Asset & Holdings Header Card
-                coinLiveHeaderCard(
-                    coin: coin,
-                    currentHolding: currentHolding,
-                    currentHoldingValue: currentHoldingValue
-                )
+                coinLiveHeaderCard(coin: coin)
                 
                 // Amount Input Studio Box
-                amountInputCard(
-                    coin: coin,
-                    currentHolding: currentHolding,
-                    tradeAmount: tradeAmount
-                )
+                amountInputCard(coin: coin)
                 
                 // Order Impact & Position Shift Card
-                orderImpactCard(
-                    coin: coin,
-                    tradeAmount: tradeAmount,
-                    totalOrderValue: totalOrderValue,
-                    currentHolding: currentHolding,
-                    resultingHolding: resultingHolding,
-                    currentInvested: currentInvested,
-                    isInsufficientBalance: isInsufficientBalance,
-                    isInsufficientCash: isInsufficientCash
-                )
+                orderImpactCard(coin: coin)
                 
                 // Big Glowing Action Button
-                orderActionButton(
-                    coin: coin,
-                    tradeAmount: tradeAmount,
-                    totalOrderValue: totalOrderValue,
-                    canExecute: canExecuteOrder,
-                    isInsufficientBalance: isInsufficientBalance,
-                    isInsufficientCash: isInsufficientCash
-                )
+                orderActionButton
                 
                 // Embedded Coin Trade History (Mini Ledger)
-                if !coinHistory.isEmpty {
-                    coinTradeHistorySection(transactions: coinHistory, symbol: coin.symbol.uppercased())
+                if !viewModel.activeCoinHistory.isEmpty {
+                    coinTradeHistorySection(
+                        transactions: viewModel.activeCoinHistory,
+                        symbol: coin.symbol.uppercased()
+                    )
                 }
             }
             .padding(.horizontal, 16)
@@ -749,20 +644,20 @@ extension ManagePortfolioView {
     private func tradeStudioHeaderBar(coin: CoinModel) -> some View {
         HStack(alignment: .center) {
             Button {
-                if initialCoin != nil {
+                if viewModel.isDirectLaunch {
                     dismiss()
                 } else {
                     withAnimation {
-                        activeCoin = nil
+                        viewModel.closeTradeStudio()
                     }
                 }
             } label: {
                 HStack(spacing: 5) {
-                    if initialCoin == nil {
+                    if !viewModel.isDirectLaunch {
                         Image(systemName: "chevron.left")
                             .font(.system(size: 14, weight: .bold))
                     }
-                    Text(initialCoin != nil ? "Close" : "Portfolio")
+                    Text(viewModel.isDirectLaunch ? "Close" : "Portfolio")
                         .font(.system(size: 15, weight: .semibold))
                 }
                 .foregroundStyle(Color.theme.accent)
@@ -773,7 +668,6 @@ extension ManagePortfolioView {
             
             // Coin Symbol & Rank Tag
             HStack(spacing: 6) {
-                
                 Text("#\(coin.rank)")
                     .font(.system(size: 11, weight: .bold, design: .monospaced))
                     .padding(.horizontal, 6)
@@ -792,7 +686,7 @@ extension ManagePortfolioView {
             // Price Tag
             Text(coin.currentPrice.asFormattedPrice())
                 .font(.system(size: 14, weight: .bold, design: .rounded))
-                .foregroundStyle(themeColor)
+                .foregroundStyle(viewModel.themeColor)
         }
         .padding(.top, 20)
     }
@@ -803,7 +697,7 @@ extension ManagePortfolioView {
             // BUY Tab
             Button {
                 withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
-                    tradeType = .buy
+                    viewModel.tradeType = .buy
                 }
                 HapticManager.selection()
             } label: {
@@ -817,21 +711,21 @@ extension ManagePortfolioView {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 12)
                 .background {
-                    if tradeType == .buy {
+                    if viewModel.tradeType == .buy {
                         RoundedRectangle(cornerRadius: 12)
                             .fill(Color.theme.green.opacity(0.8))
                             .shadow(color: Color.theme.green.opacity(0.3), radius: 8, x: 0, y: 3)
                             .matchedGeometryEffect(id: "tradeToggleBackground", in: tradeToggleNamespace)
                     }
                 }
-                .foregroundStyle(tradeType == .buy ? Color.white : Color.theme.secondaryText)
+                .foregroundStyle(viewModel.tradeType == .buy ? Color.white : Color.theme.secondaryText)
             }
             .buttonStyle(.plain)
             
             // SELL Tab
             Button {
                 withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
-                    tradeType = .sell
+                    viewModel.tradeType = .sell
                 }
                 HapticManager.selection()
             } label: {
@@ -845,14 +739,14 @@ extension ManagePortfolioView {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 12)
                 .background {
-                    if tradeType == .sell {
+                    if viewModel.tradeType == .sell {
                         RoundedRectangle(cornerRadius: 12)
                             .fill(Color.theme.red)
                             .shadow(color: Color.theme.red.opacity(0.35), radius: 8, x: 0, y: 3)
                             .matchedGeometryEffect(id: "tradeToggleBackground", in: tradeToggleNamespace)
                     }
                 }
-                .foregroundStyle(tradeType == .sell ? Color.white : Color.theme.secondaryText)
+                .foregroundStyle(viewModel.tradeType == .sell ? Color.white : Color.theme.secondaryText)
             }
             .buttonStyle(.plain)
         }
@@ -868,7 +762,7 @@ extension ManagePortfolioView {
     }
     
     // MARK: - Live Coin Header Card
-    private func coinLiveHeaderCard(coin: CoinModel, currentHolding: Double, currentHoldingValue: Double) -> some View {
+    private func coinLiveHeaderCard(coin: CoinModel) -> some View {
         VStack(spacing: 12) {
             HStack(spacing: 12) {
                 CoinImageView(coin: coin)
@@ -894,14 +788,14 @@ extension ManagePortfolioView {
                 
                 // Badge indicating current holding
                 VStack(alignment: .trailing, spacing: 2) {
-                    Text(currentHolding > 0 ? "You Own" : "Not Held")
+                    Text(viewModel.currentHolding > 0 ? "You Own" : "Not Held")
                         .font(.system(size: 10, weight: .bold))
                         .tracking(0.4)
                         .foregroundStyle(Color.theme.secondaryText)
                     
-                    Text("\(currentHolding.asFormattedQuantity()) \(coin.symbol.uppercased())")
+                    Text("\(viewModel.currentHolding.asFormattedQuantity()) \(coin.symbol.uppercased())")
                         .font(.system(size: 13, weight: .bold, design: .rounded))
-                        .foregroundStyle(currentHolding > 0 ? Color.theme.accent : Color.theme.secondaryText)
+                        .foregroundStyle(viewModel.currentHolding > 0 ? Color.theme.accent : Color.theme.secondaryText)
                 }
             }
             
@@ -920,7 +814,7 @@ extension ManagePortfolioView {
                         Text("Available Cash")
                             .font(.system(size: 9.5, weight: .semibold))
                             .foregroundStyle(Color.theme.secondaryText)
-                        Text(vm.cashBalance.asCurrencyWith2Decimals())
+                        Text(viewModel.cashBalance.asCurrencyWith2Decimals())
                             .font(.system(size: 12, weight: .bold, design: .rounded))
                             .foregroundStyle(Color.theme.green)
                     }
@@ -938,7 +832,7 @@ extension ManagePortfolioView {
                         Text("Holdings Value")
                             .font(.system(size: 9.5, weight: .semibold))
                             .foregroundStyle(Color.theme.secondaryText)
-                        Text(currentHoldingValue.asCurrencyWith2Decimals())
+                        Text(viewModel.currentHoldingValue.asCurrencyWith2Decimals())
                             .font(.system(size: 12, weight: .bold, design: .rounded))
                             .foregroundStyle(Color.theme.accent)
                     }
@@ -958,7 +852,7 @@ extension ManagePortfolioView {
     }
     
     // MARK: - Amount Input Studio Box
-    private func amountInputCard(coin: CoinModel, currentHolding: Double, tradeAmount: Double) -> some View {
+    private func amountInputCard(coin: CoinModel) -> some View {
         VStack(spacing: 14) {
             // Mode Selector: Dollar Amount vs Token Quantity
             HStack {
@@ -969,8 +863,8 @@ extension ManagePortfolioView {
                 
                 Spacer()
                 
-                Picker("", selection: $inputMode) {
-                    ForEach(InputMode.allCases) { mode in
+                Picker("", selection: $viewModel.inputMode) {
+                    ForEach(ManagePortfolioViewModel.InputMode.allCases) { mode in
                         Text(mode.rawValue).tag(mode)
                     }
                 }
@@ -980,25 +874,25 @@ extension ManagePortfolioView {
             
             // Primary Interactive Input Field
             HStack(alignment: .center, spacing: 8) {
-                if inputMode == .fiat {
+                if viewModel.inputMode == .fiat {
                     Text("$")
                         .font(.system(size: 28, weight: .bold, design: .rounded))
                         .foregroundStyle(Color.theme.accent)
                     
-                    TextField("0.00", text: $fiatText)
+                    TextField("0.00", text: $viewModel.fiatText)
                         .font(.system(size: 32, weight: .black, design: .rounded))
                         .keyboardType(.decimalPad)
                         .foregroundStyle(Color.theme.accent)
-                        .onChange(of: fiatText) { _, newValue in
-                            syncFromFiat(newFiat: newValue, price: coin.currentPrice)
+                        .onChange(of: viewModel.fiatText) { _, newValue in
+                            viewModel.syncFromFiat(newFiat: newValue)
                         }
                 } else {
-                    TextField("0.00", text: $quantityText)
+                    TextField("0.00", text: $viewModel.quantityText)
                         .font(.system(size: 32, weight: .black, design: .rounded))
                         .keyboardType(.decimalPad)
                         .foregroundStyle(Color.theme.accent)
-                        .onChange(of: quantityText) { _, newValue in
-                            syncFromQuantity(newQty: newValue, price: coin.currentPrice)
+                        .onChange(of: viewModel.quantityText) { _, newValue in
+                            viewModel.syncFromQuantity(newQty: newValue)
                         }
                     
                     Text(coin.symbol.uppercased())
@@ -1010,14 +904,13 @@ extension ManagePortfolioView {
             
             // Converted Equivalent Subtext
             HStack {
-                if inputMode == .fiat {
-                    Text("≈ \(tradeAmount.asFormattedQuantity()) \(coin.symbol.uppercased())")
+                if viewModel.inputMode == .fiat {
+                    Text("≈ \(viewModel.tradeAmount.asFormattedQuantity()) \(coin.symbol.uppercased())")
                         .font(.caption)
                         .fontWeight(.semibold)
                         .foregroundStyle(Color.theme.secondaryText)
                 } else {
-                    let totalVal = tradeAmount * coin.currentPrice
-                    Text("≈ \(totalVal.asCurrencyWith2Decimals())")
+                    Text("≈ \(viewModel.totalOrderValue.asCurrencyWith2Decimals())")
                         .font(.caption)
                         .fontWeight(.semibold)
                         .foregroundStyle(Color.theme.secondaryText)
@@ -1025,10 +918,9 @@ extension ManagePortfolioView {
                 
                 Spacer()
                 
-                if !fiatText.isEmpty || !quantityText.isEmpty {
+                if !viewModel.fiatText.isEmpty || !viewModel.quantityText.isEmpty {
                     Button("Clear") {
-                        fiatText = ""
-                        quantityText = ""
+                        viewModel.clearInput()
                     }
                     .font(.caption)
                     .fontWeight(.bold)
@@ -1040,12 +932,12 @@ extension ManagePortfolioView {
                 .background(Color.theme.secondaryText.opacity(0.10))
             
             // Quick Percentage & Quick Value Buttons
-            if tradeType == .buy {
+            if viewModel.tradeType == .buy {
                 // Buy Quick Cash Chips: +$100, +$500, +$1,000, MAX Cash
                 HStack(spacing: 8) {
                     ForEach([100.0, 500.0, 1000.0], id: \.self) { delta in
                         Button {
-                            addFiatAmount(delta: delta, price: coin.currentPrice)
+                            viewModel.addFiatAmount(delta: delta)
                         } label: {
                             Text("+$\(Int(delta))")
                                 .font(.system(size: 12, weight: .bold))
@@ -1059,7 +951,7 @@ extension ManagePortfolioView {
                     }
                     
                     Button {
-                        setFiatAmount(amount: vm.cashBalance, price: coin.currentPrice)
+                        viewModel.setFiatAmount(amount: viewModel.cashBalance)
                     } label: {
                         Text("MAX")
                             .font(.system(size: 12, weight: .black))
@@ -1070,7 +962,7 @@ extension ManagePortfolioView {
                             .foregroundStyle(Color.black)
                     }
                     .buttonStyle(.plain)
-                    .disabled(vm.cashBalance <= 0)
+                    .disabled(viewModel.cashBalance <= 0)
                 }
             } else {
                 // Sell Fraction Chips: 25%, 50%, 75%, MAX
@@ -1080,7 +972,7 @@ extension ManagePortfolioView {
                         let title = isMax ? "MAX" : "\(Int(fraction * 100))%"
                         
                         Button {
-                            setSellFraction(fraction: fraction, currentHolding: currentHolding, price: coin.currentPrice)
+                            viewModel.setSellFraction(fraction: fraction)
                         } label: {
                             Text(title)
                                 .font(.system(size: 12, weight: isMax ? .black : .bold))
@@ -1091,7 +983,7 @@ extension ManagePortfolioView {
                                 .foregroundStyle(isMax ? Color.white : Color.theme.red)
                         }
                         .buttonStyle(.plain)
-                        .disabled(currentHolding <= 0)
+                        .disabled(viewModel.currentHolding <= 0)
                     }
                 }
             }
@@ -1109,23 +1001,14 @@ extension ManagePortfolioView {
     }
     
     // MARK: - Order Impact Breakdown Card
-    private func orderImpactCard(
-        coin: CoinModel,
-        tradeAmount: Double,
-        totalOrderValue: Double,
-        currentHolding: Double,
-        resultingHolding: Double,
-        currentInvested: Double,
-        isInsufficientBalance: Bool,
-        isInsufficientCash: Bool
-    ) -> some View {
+    private func orderImpactCard(coin: CoinModel) -> some View {
         VStack(spacing: 12) {
             // Insufficient Warnings
-            if isInsufficientBalance {
+            if viewModel.isInsufficientBalance {
                 HStack(spacing: 8) {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .foregroundStyle(Color.theme.red)
-                    Text("Insufficient coins. You hold \(currentHolding.asFormattedQuantity()) \(coin.symbol.uppercased()).")
+                    Text("Insufficient coins. You hold \(viewModel.currentHolding.asFormattedQuantity()) \(coin.symbol.uppercased()).")
                         .font(.caption)
                         .fontWeight(.bold)
                         .foregroundStyle(Color.theme.red)
@@ -1136,7 +1019,7 @@ extension ManagePortfolioView {
                 .clipShape(RoundedRectangle(cornerRadius: 10))
             }
             
-            if isInsufficientCash {
+            if viewModel.isInsufficientCash {
                 HStack(spacing: 8) {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .foregroundStyle(Color.theme.red)
@@ -1146,7 +1029,7 @@ extension ManagePortfolioView {
                             .font(.caption)
                             .fontWeight(.bold)
                             .foregroundStyle(Color.theme.red)
-                        Text("Cash short by \((totalOrderValue - vm.cashBalance).asCurrencyWith2Decimals())")
+                        Text("Cash short by \((viewModel.totalOrderValue - viewModel.cashBalance).asCurrencyWith2Decimals())")
                             .font(.caption2)
                             .foregroundStyle(Color.theme.secondaryText)
                     }
@@ -1177,14 +1060,14 @@ extension ManagePortfolioView {
                 
                 // Total Order Cost / Proceeds Row
                 HStack {
-                    Text(tradeType == .buy ? "Total Purchase Cost" : "Total Sale Proceeds")
+                    Text(viewModel.tradeType == .buy ? "Total Purchase Cost" : "Total Sale Proceeds")
                         .font(.subheadline)
                         .fontWeight(.bold)
                         .foregroundStyle(Color.theme.accent)
                     Spacer()
-                    Text(totalOrderValue.asCurrencyWith2Decimals())
+                    Text(viewModel.totalOrderValue.asCurrencyWith2Decimals())
                         .font(.system(size: 16, weight: .black, design: .rounded))
-                        .foregroundStyle(themeColor)
+                        .foregroundStyle(viewModel.themeColor)
                 }
                 
                 Divider()
@@ -1197,12 +1080,12 @@ extension ManagePortfolioView {
                         .foregroundStyle(Color.theme.secondaryText)
                     Spacer()
                     HStack(spacing: 5) {
-                        Text("\(currentHolding.asFormattedQuantity())")
+                        Text("\(viewModel.currentHolding.asFormattedQuantity())")
                             .foregroundStyle(Color.theme.secondaryText)
                         Image(systemName: "arrow.right")
                             .font(.caption2)
                             .foregroundStyle(Color.theme.secondaryText)
-                        Text("\(resultingHolding.asFormattedQuantity()) \(coin.symbol.uppercased())")
+                        Text("\(viewModel.resultingHolding.asFormattedQuantity()) \(coin.symbol.uppercased())")
                             .fontWeight(.bold)
                             .foregroundStyle(Color.theme.accent)
                     }
@@ -1210,11 +1093,7 @@ extension ManagePortfolioView {
                 }
                 
                 // Projected Average Buy Price (DCA calculation when buying)
-                if tradeType == .buy && tradeAmount > 0 {
-                    let newInvested = currentInvested + totalOrderValue
-                    let newHolding = currentHolding + tradeAmount
-                    let projectedAvgPrice = newHolding > 0 ? (newInvested / newHolding) : coin.currentPrice
-                    
+                if let projectedAvgPrice = viewModel.projectedAverageBuyPrice {
                     Divider()
                         .background(Color.theme.secondaryText.opacity(0.10))
                     
@@ -1244,56 +1123,35 @@ extension ManagePortfolioView {
     }
     
     // MARK: - Big Glowing Order Action Button
-    private func orderActionButton(
-        coin: CoinModel,
-        tradeAmount: Double,
-        totalOrderValue: Double,
-        canExecute: Bool,
-        isInsufficientBalance: Bool,
-        isInsufficientCash: Bool
-    ) -> some View {
-        let isBuy = tradeType == .buy
+    private var orderActionButton: some View {
+        let isBuy = viewModel.tradeType == .buy
         let actionColor = isBuy ? Color.theme.green.opacity(0.8) : Color.theme.red
         
-        var buttonTitle: String {
-            if orderExecuted {
-                return "Order Executed Successfully!"
-            } else if tradeAmount <= 0 {
-                return "Enter Amount to \(isBuy ? "Buy" : "Sell")"
-            } else if isInsufficientCash {
-                return "Insufficient Cash Funds"
-            } else if isInsufficientBalance {
-                return "Insufficient \(coin.symbol.uppercased()) Balance"
-            } else {
-                return "\(isBuy ? "Buy" : "Sell") \(coin.symbol.uppercased()) • \(totalOrderValue.asCurrencyWith2Decimals())"
-            }
-        }
-        
         return Button {
-            executeTrade(coin: coin, amount: tradeAmount)
+            viewModel.executeTrade()
         } label: {
             HStack(spacing: 8) {
-                if orderExecuted {
+                if viewModel.orderExecuted {
                     Image(systemName: "checkmark.circle.fill")
                         .font(.system(size: 16, weight: .bold))
-                } else if canExecute {
+                } else if viewModel.canExecuteOrder {
                     Image(systemName: isBuy ? "arrow.down.left" : "arrow.up.right")
                         .font(.system(size: 14, weight: .black))
                 }
                 
-                Text(buttonTitle)
+                Text(viewModel.orderActionButtonTitle)
                     .font(.system(size: 15, weight: .bold, design: .rounded))
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 14)
             .background(
-                canExecute ? actionColor : Color.theme.secondaryText.opacity(0.18)
+                viewModel.canExecuteOrder ? actionColor : Color.theme.secondaryText.opacity(0.18)
             )
-            .foregroundStyle(canExecute ? Color.white : Color.theme.secondaryText)
+            .foregroundStyle(viewModel.canExecuteOrder ? Color.white : Color.theme.secondaryText)
             .clipShape(Capsule())
-            .shadow(color: canExecute ? actionColor.opacity(0.3) : Color.clear, radius: 8, x: 0, y: 4)
+            .shadow(color: viewModel.canExecuteOrder ? actionColor.opacity(0.3) : Color.clear, radius: 8, x: 0, y: 4)
         }
-        .disabled(!canExecute || orderExecuted)
+        .disabled(!viewModel.canExecuteOrder || viewModel.orderExecuted)
         .buttonStyle(.plain)
     }
     
@@ -1365,93 +1223,6 @@ extension ManagePortfolioView {
             )
         }
         .padding(.top, 4)
-    }
-}
-
-// MARK: - Logic & Sync Helpers
-extension ManagePortfolioView {
-    
-    private func openTradeStudio(for coin: CoinModel, type: TransactionType) {
-        activeCoin = coin
-        tradeType = type
-        quantityText = ""
-        fiatText = ""
-    }
-    
-    private func syncFromQuantity(newQty: String, price: Double) {
-        guard inputMode == .token else { return }
-        if let qty = Double(newQty) {
-            fiatText = String(format: "%.2f", qty * price)
-        } else {
-            fiatText = ""
-        }
-    }
-    
-    private func syncFromFiat(newFiat: String, price: Double) {
-        guard inputMode == .fiat else { return }
-        if let fiat = Double(newFiat), price > 0 {
-            let qty = fiat / price
-            quantityText = qty.asRawQuantityString()
-        } else {
-            quantityText = ""
-        }
-    }
-    
-    private func addFiatAmount(delta: Double, price: Double) {
-        inputMode = .fiat
-        let currentFiat = Double(fiatText) ?? 0
-        let newFiat = currentFiat + delta
-        fiatText = newFiat.truncatingRemainder(dividingBy: 1) == 0 ? String(format: "%.0f", newFiat) : String(format: "%.2f", newFiat)
-        if price > 0 {
-            let qty = newFiat / price
-            quantityText = qty.asRawQuantityString()
-        }
-        HapticManager.notification(type: .success)
-    }
-    
-    private func setFiatAmount(amount: Double, price: Double) {
-        inputMode = .fiat
-        fiatText = amount.truncatingRemainder(dividingBy: 1) == 0 ? String(format: "%.0f", amount) : String(format: "%.2f", amount)
-        if price > 0 {
-            let qty = amount / price
-            quantityText = qty.asRawQuantityString()
-        }
-        HapticManager.notification(type: .success)
-    }
-    
-    private func setSellFraction(fraction: Double, currentHolding: Double, price: Double) {
-        inputMode = .token
-        let qtyToSell = currentHolding * fraction
-        quantityText = qtyToSell.asRawQuantityString()
-        fiatText = String(format: "%.2f", qtyToSell * price)
-        HapticManager.notification(type: .success)
-    }
-    
-    private func executeTrade(coin: CoinModel, amount: Double) {
-        let success = vm.executeOrder(coin: coin, type: tradeType, amount: amount, pricePerCoin: coin.currentPrice)
-        guard success else {
-            HapticManager.notification(type: .error)
-            return
-        }
-        
-        withAnimation(.easeIn(duration: 0.2)) {
-            orderExecuted = true
-        }
-        HapticManager.notification(type: .success)
-        UIApplication.shared.endEditing()
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
-            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                orderExecuted = false
-                quantityText = ""
-                fiatText = ""
-                if initialCoin != nil {
-                    dismiss()
-                } else {
-                    activeCoin = nil
-                }
-            }
-        }
     }
 }
 
