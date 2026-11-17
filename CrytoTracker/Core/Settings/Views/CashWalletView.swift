@@ -250,7 +250,6 @@ extension CashWalletView {
             HStack(spacing: 10) {
                 heroMetricSubCard(
                     title: "Deposited",
-                    countText: "\(viewModel.depositTransactions.count) Inflows",
                     amountText: viewModel.totalDeposited.asCurrencyWith2Decimals(),
                     color: Color.theme.green,
                     systemImage: "arrow.down.left.circle.fill"
@@ -258,7 +257,6 @@ extension CashWalletView {
                 
                 heroMetricSubCard(
                     title: "Withdrawn",
-                    countText: "\(viewModel.withdrawTransactions.count) Outflows",
                     amountText: viewModel.totalWithdrawn.asCurrencyWith2Decimals(),
                     color: Color.theme.red,
                     systemImage: "arrow.up.right.circle.fill"
@@ -341,7 +339,6 @@ extension CashWalletView {
     // MARK: - Hero Metric Sub-Card
     private func heroMetricSubCard(
         title: String,
-        countText: String,
         amountText: String,
         color: Color,
         systemImage: String
@@ -356,12 +353,6 @@ extension CashWalletView {
                 
                 Spacer(minLength: 4)
                 
-                Text(countText)
-                    .font(.system(size: 9.5, weight: .semibold))
-                    .padding(.horizontal, 5)
-                    .padding(.vertical, 2)
-                    .background(color.opacity(0.12))
-                    .clipShape(Capsule())
             }
             .foregroundStyle(color)
             
