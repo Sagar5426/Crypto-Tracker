@@ -104,6 +104,38 @@ final class CashWalletViewModel: ObservableObject {
         }
     }
     
+    var depositTransactions: [TransactionEntity] {
+        cashTransactions.filter { ($0.transactionType ?? "").uppercased() == "DEPOSIT" }
+    }
+    
+    var withdrawTransactions: [TransactionEntity] {
+        cashTransactions.filter { ($0.transactionType ?? "").uppercased() == "WITHDRAW" }
+    }
+    
+    var totalDeposited: Double {
+        depositTransactions.reduce(0.0) { $0 + $1.totalValue }
+    }
+    
+    var totalWithdrawn: Double {
+        withdrawTransactions.reduce(0.0) { $0 + $1.totalValue }
+    }
+    
+    var netCashFlow: Double {
+        totalDeposited - totalWithdrawn
+    }
+    
+    var depositRatio: Double {
+        let total = totalDeposited + totalWithdrawn
+        guard total > 0 else { return 1.0 }
+        return totalDeposited / total
+    }
+    
+    var withdrawRatio: Double {
+        let total = totalDeposited + totalWithdrawn
+        guard total > 0 else { return 0.0 }
+        return totalWithdrawn / total
+    }
+    
     // MARK: - User Intent Actions
     
     func selectMode(_ mode: WalletAction) {
@@ -112,22 +144,41 @@ final class CashWalletViewModel: ObservableObject {
             selectedMode = mode
             amountText = ""
         }
-        HapticManager.notification(type: .success)
+        HapticManager.selection()
     }
     
     func applyDepositPreset(_ preset: Double) {
         amountText = String(format: "%.0f", preset)
-        HapticManager.notification(type: .success)
+        HapticManager.selection()
     }
     
     func applyWithdrawalFraction(_ fraction: Double) {
         let calculated = cashBalance * fraction
         amountText = String(format: "%.2f", calculated)
-        HapticManager.notification(type: .success)
+        HapticManager.selection()
     }
     
     func clearAmount() {
         amountText = ""
+        HapticManager.selection()
+    }
+    
+    func resetWalletToDefault() {
+        marketViewModel?.resetCashWallet(to: 10_000.0)
+        showSuccessMessage = true
+        successDescription = "Reset wallet to $10,000.00"
+        HapticManager.notification(type: .success)
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
+            withAnimation {
+                self?.showSuccessMessage = false
+            }
+        }
+    }
+    
+    func refreshBalance() {
+        marketViewModel?.reloadData()
+        HapticManager.notification(type: .success)
     }
     
     func executeWalletAction() {

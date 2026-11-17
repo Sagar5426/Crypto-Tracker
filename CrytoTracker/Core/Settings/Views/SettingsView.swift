@@ -79,24 +79,6 @@ struct SettingsView: View {
             } message: {
                 Text("This will delete all cached coin icons from local storage. They will reload automatically when needed.")
             }
-            .alert("Reset Cash Wallet", isPresented: $viewModel.showResetWalletAlert) {
-                Button("Reset to $10,000", role: .destructive) {
-                    viewModel.resetCashWallet()
-                }
-                Button("Cancel", role: .cancel) { }
-            } message: {
-                Text("This will restore your wallet fund balance to the default $10,000.00.")
-            }
-            .fullScreenCover(isPresented: $viewModel.showProfitAndLossView) {
-                NavigationStack {
-                    ProfitAndLossView()
-                }
-            }
-            .fullScreenCover(isPresented: $viewModel.showTradeBookView) {
-                NavigationStack {
-                    TradeBookView()
-                }
-            }
         }
     }
 }
@@ -369,8 +351,8 @@ extension SettingsView {
             
             VStack(spacing: 0) {
                 // 1. Cash Wallet Row
-                NavigationLink {
-                    CashWalletView()
+                Button {
+                    viewModel.openCashWallet()
                 } label: {
                     settingsRow(
                         icon: "banknote.fill",
@@ -391,6 +373,12 @@ extension SettingsView {
                     )
                 }
                 .buttonStyle(.plain)
+                .fullScreenCover(isPresented: $viewModel.showCashWalletView) {
+                    NavigationStack {
+                        CashWalletView()
+                    }
+                    .environmentObject(vm)
+                }
                 
                 rowDivider
                 
@@ -421,6 +409,12 @@ extension SettingsView {
                     )
                 }
                 .buttonStyle(.plain)
+                .fullScreenCover(isPresented: $viewModel.showProfitAndLossView) {
+                    NavigationStack {
+                        ProfitAndLossView()
+                    }
+                    .environmentObject(vm)
+                }
                 
                 rowDivider
                 
@@ -451,6 +445,12 @@ extension SettingsView {
                     )
                 }
                 .buttonStyle(.plain)
+                .fullScreenCover(isPresented: $viewModel.showTradeBookView) {
+                    NavigationStack {
+                        TradeBookView()
+                    }
+                    .environmentObject(vm)
+                }
             }
             .background(sectionContainerBackground)
         }
@@ -586,30 +586,6 @@ extension SettingsView {
                                 .padding(.vertical, 5)
                                 .background(Color.theme.secondaryText.opacity(0.1))
                                 .foregroundStyle(Color.theme.accent)
-                                .clipShape(Capsule())
-                        }
-                        .buttonStyle(.plain)
-                    )
-                )
-                
-                rowDivider
-                
-                // Reset Simulated Cash
-                settingsRow(
-                    icon: "arrow.counterclockwise.circle.fill",
-                    iconColor: Color.orange,
-                    title: "Reset Cash Wallet",
-                    subtitle: "Restore balance to $10,000.00",
-                    trailingContent: AnyView(
-                        Button {
-                            viewModel.showResetWalletAlert = true
-                        } label: {
-                            Text("Reset")
-                                .font(.system(size: 12, weight: .bold))
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 5)
-                                .background(Color.orange.opacity(0.12))
-                                .foregroundStyle(Color.orange)
                                 .clipShape(Capsule())
                         }
                         .buttonStyle(.plain)

@@ -185,10 +185,187 @@ extension WatchlistView {
 // MARK: - Watchlist Pulse Summary Card
 extension WatchlistView {
     
+//    private var watchlistPulseCard: some View {
+//        let isPositive = viewModel.averageChange24H >= 0
+//        let avgBadgeColor = isPositive ? Color.theme.green : Color.theme.red
+//        
+//        return VStack(spacing: 14) {
+//            // Top Row: Title + 24h Avg Trend Pill
+//            HStack(alignment: .center) {
+//                HStack(spacing: 8) {
+//                    ZStack {
+//                        Circle()
+//                            .fill(Color.yellow.opacity(0.16))
+//                            .frame(width: 34, height: 34)
+//                        Image(systemName: "star.fill")
+//                            .font(.system(size: 15))
+//                            .foregroundStyle(Color.yellow)
+//                    }
+//                    
+//                    VStack(alignment: .leading, spacing: 2) {
+//                        Text("Watchlist Pulse")
+//                            .font(.system(size: 16, weight: .bold, design: .rounded))
+//                            .foregroundStyle(Color.theme.accent)
+//                        
+//                        Text("\(viewModel.watchlistCoins.count) Assets Tracked")
+//                            .font(.caption2)
+//                            .fontWeight(.medium)
+//                            .foregroundStyle(Color.theme.secondaryText)
+//                    }
+//                }
+//                
+//                Spacer()
+//                
+//                // 24H Average Badge
+//                HStack(spacing: 4) {
+//                    Image(systemName: isPositive ? "arrow.up.right" : "arrow.down.right")
+//                        .font(.system(size: 10, weight: .bold))
+//                    Text(viewModel.averageChange24H.asPercentString())
+//                        .font(.system(size: 12, weight: .bold, design: .rounded))
+//                    Text("24h avg")
+//                        .font(.system(size: 10, weight: .medium))
+//                        .foregroundStyle(avgBadgeColor.opacity(0.8))
+//                }
+//                .foregroundStyle(avgBadgeColor)
+//                .padding(.horizontal, 10)
+//                .padding(.vertical, 6)
+//                .background(avgBadgeColor.opacity(0.12))
+//                .clipShape(Capsule())
+//            }
+//            
+//            Divider()
+//                .background(Color.theme.secondaryText.opacity(0.15))
+//            
+//            // Bottom 3-Metric Summary Row
+//            HStack(spacing: 12) {
+//                // Metric 1: Sentiment / Ratio
+//                VStack(alignment: .leading, spacing: 4) {
+//                    Text("Market Trend")
+//                        .font(.caption2)
+//                        .foregroundStyle(Color.theme.secondaryText)
+//                    
+//                    HStack(spacing: 6) {
+//                        HStack(spacing: 2) {
+//                            Image(systemName: "arrow.up")
+//                                .font(.system(size: 8, weight: .bold))
+//                            Text("\(viewModel.gainersCount)")
+//                                .font(.system(size: 13, weight: .bold, design: .rounded))
+//                        }
+//                        .foregroundStyle(Color.theme.green)
+//                        
+//                        Text("•")
+//                            .foregroundStyle(Color.theme.secondaryText.opacity(0.4))
+//                        
+//                        HStack(spacing: 2) {
+//                            Image(systemName: "arrow.down")
+//                                .font(.system(size: 8, weight: .bold))
+//                            Text("\(viewModel.losersCount)")
+//                                .font(.system(size: 13, weight: .bold, design: .rounded))
+//                        }
+//                        .foregroundStyle(Color.theme.red)
+//                    }
+//                }
+//                .frame(maxWidth: .infinity, alignment: .leading)
+//                
+//                // Metric 2: Top Gainer
+//                if let topGainer = viewModel.topPerformer {
+//                    Button {
+//                        viewModel.selectedCoinForDetail = topGainer
+//                    } label: {
+//                        VStack(alignment: .leading, spacing: 4) {
+//                            Text("Top Gainer")
+//                                .font(.caption2)
+//                                .foregroundStyle(Color.theme.secondaryText)
+//                            
+//                            VStack(spacing: 2) {
+//                                HStack(spacing: 4) {
+//                                    CoinImageView(coin: topGainer)
+//                                        .frame(width: 14, height: 14)
+//                                        .clipShape(Circle())
+//                                    
+//                                    Text(topGainer.symbol.uppercased())
+//                                        .font(.system(size: 12, weight: .bold))
+//                                        .foregroundStyle(Color.theme.accent)
+//                                }
+//                                
+//                                Text("+" + (topGainer.priceChangePercentage24H?.asPercentString() ?? "0%"))
+//                                    .font(.system(size: 11, weight: .bold))
+//                                    .foregroundStyle(Color.theme.green)
+//                            }
+//                        }
+//                    }
+//                    .buttonStyle(.plain)
+//                    .frame(maxWidth: .infinity, alignment: .leading)
+//                } else {
+//                    VStack(alignment: .leading, spacing: 4) {
+//                        Text("Top Gainer")
+//                            .font(.caption2)
+//                            .foregroundStyle(Color.theme.secondaryText)
+//                        Text("—")
+//                            .font(.system(size: 13, weight: .semibold))
+//                            .foregroundStyle(Color.theme.secondaryText)
+//                    }
+//                    .frame(maxWidth: .infinity, alignment: .leading)
+//                }
+//                
+//                // Metric 3: Top Dip
+//                if let dip = viewModel.topDip {
+//                    Button {
+//                        viewModel.selectedCoinForDetail = dip
+//                    } label: {
+//                        VStack(alignment: .leading, spacing: 4) {
+//                            Text("Top Dip")
+//                                .font(.caption2)
+//                                .foregroundStyle(Color.theme.secondaryText)
+//                            
+//                            VStack(spacing: 2) {
+//                                HStack(spacing: 4) {
+//                                    CoinImageView(coin: dip)
+//                                        .frame(width: 14, height: 14)
+//                                        .clipShape(Circle())
+//                                    
+//                                    Text(dip.symbol.uppercased())
+//                                        .font(.system(size: 12, weight: .bold))
+//                                        .foregroundStyle(Color.theme.accent)
+//                                }
+//                                
+//                                Text(dip.priceChangePercentage24H?.asPercentString() ?? "0%")
+//                                    .font(.system(size: 11, weight: .bold))
+//                                    .foregroundStyle(Color.theme.red)
+//                            }
+//                        }
+//                    }
+//                    .buttonStyle(.plain)
+//                    .frame(maxWidth: .infinity, alignment: .leading)
+//                } else {
+//                    VStack(alignment: .leading, spacing: 4) {
+//                        Text("Top Dip")
+//                            .font(.caption2)
+//                            .foregroundStyle(Color.theme.secondaryText)
+//                        Text("—")
+//                            .font(.system(size: 13, weight: .semibold))
+//                            .foregroundStyle(Color.theme.secondaryText)
+//                    }
+//                    .frame(maxWidth: .infinity, alignment: .leading)
+//                }
+//            }
+//        }
+//        .padding(14)
+//        .background(
+//            RoundedRectangle(cornerRadius: 16)
+//                .fill(Color.theme.background)
+//                .shadow(color: Color.theme.accent.opacity(0.04), radius: 6, x: 0, y: 3)
+//                .overlay(
+//                    RoundedRectangle(cornerRadius: 16)
+//                        .stroke(Color.theme.secondaryText.opacity(0.12), lineWidth: 1)
+//                )
+//        )
+//    }
+    
     private var watchlistPulseCard: some View {
         let isPositive = viewModel.averageChange24H >= 0
         let avgBadgeColor = isPositive ? Color.theme.green : Color.theme.red
-        
+         
         return VStack(spacing: 14) {
             // Top Row: Title + 24h Avg Trend Pill
             HStack(alignment: .center) {
@@ -201,21 +378,21 @@ extension WatchlistView {
                             .font(.system(size: 15))
                             .foregroundStyle(Color.yellow)
                     }
-                    
+                     
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Watchlist Pulse")
                             .font(.system(size: 16, weight: .bold, design: .rounded))
                             .foregroundStyle(Color.theme.accent)
-                        
+                         
                         Text("\(viewModel.watchlistCoins.count) Assets Tracked")
                             .font(.caption2)
                             .fontWeight(.medium)
                             .foregroundStyle(Color.theme.secondaryText)
                     }
                 }
-                
+                 
                 Spacer()
-                
+                 
                 // 24H Average Badge
                 HStack(spacing: 4) {
                     Image(systemName: isPositive ? "arrow.up.right" : "arrow.down.right")
@@ -232,18 +409,18 @@ extension WatchlistView {
                 .background(avgBadgeColor.opacity(0.12))
                 .clipShape(Capsule())
             }
-            
+             
             Divider()
                 .background(Color.theme.secondaryText.opacity(0.15))
-            
-            // Bottom 3-Metric Summary Row
+             
+            // Bottom 3-Metric Summary Row (Aligned: Left, Center, Right)
             HStack(spacing: 12) {
-                // Metric 1: Sentiment / Ratio
+                // 1. Market Trend (Left)
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Market Trend")
                         .font(.caption2)
                         .foregroundStyle(Color.theme.secondaryText)
-                    
+                     
                     HStack(spacing: 6) {
                         HStack(spacing: 2) {
                             Image(systemName: "arrow.up")
@@ -252,10 +429,10 @@ extension WatchlistView {
                                 .font(.system(size: 13, weight: .bold, design: .rounded))
                         }
                         .foregroundStyle(Color.theme.green)
-                        
+                         
                         Text("•")
                             .foregroundStyle(Color.theme.secondaryText.opacity(0.4))
-                        
+                         
                         HStack(spacing: 2) {
                             Image(systemName: "arrow.down")
                                 .font(.system(size: 8, weight: .bold))
@@ -266,88 +443,36 @@ extension WatchlistView {
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                
-                // Metric 2: Top Gainer
-                if let topGainer = viewModel.topPerformer {
-                    Button {
-                        viewModel.selectedCoinForDetail = topGainer
-                    } label: {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Top Gainer")
-                                .font(.caption2)
-                                .foregroundStyle(Color.theme.secondaryText)
-                            
-                            VStack(spacing: 2) {
-                                HStack(spacing: 4) {
-                                    CoinImageView(coin: topGainer)
-                                        .frame(width: 14, height: 14)
-                                        .clipShape(Circle())
-                                    
-                                    Text(topGainer.symbol.uppercased())
-                                        .font(.system(size: 12, weight: .bold))
-                                        .foregroundStyle(Color.theme.accent)
-                                }
-                                
-                                Text("+" + (topGainer.priceChangePercentage24H?.asPercentString() ?? "0%"))
-                                    .font(.system(size: 11, weight: .bold))
-                                    .foregroundStyle(Color.theme.green)
-                            }
+                 
+                // 2. Top Gainer (Center)
+                Group {
+                    if let topGainer = viewModel.topPerformer {
+                        Button {
+                            viewModel.selectedCoinForDetail = topGainer
+                        } label: {
+                            topGainerContent(topGainer)
                         }
+                        .buttonStyle(.plain)
+                    } else {
+                        placeholderMetric(title: "Top Gainer")
                     }
-                    .buttonStyle(.plain)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                } else {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Top Gainer")
-                            .font(.caption2)
-                            .foregroundStyle(Color.theme.secondaryText)
-                        Text("—")
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundStyle(Color.theme.secondaryText)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                
-                // Metric 3: Top Dip
-                if let dip = viewModel.topDip {
-                    Button {
-                        viewModel.selectedCoinForDetail = dip
-                    } label: {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Top Dip")
-                                .font(.caption2)
-                                .foregroundStyle(Color.theme.secondaryText)
-                            
-                            VStack(spacing: 2) {
-                                HStack(spacing: 4) {
-                                    CoinImageView(coin: dip)
-                                        .frame(width: 14, height: 14)
-                                        .clipShape(Circle())
-                                    
-                                    Text(dip.symbol.uppercased())
-                                        .font(.system(size: 12, weight: .bold))
-                                        .foregroundStyle(Color.theme.accent)
-                                }
-                                
-                                Text(dip.priceChangePercentage24H?.asPercentString() ?? "0%")
-                                    .font(.system(size: 11, weight: .bold))
-                                    .foregroundStyle(Color.theme.red)
-                            }
+                .frame(maxWidth: .infinity, alignment: .center)
+                 
+                // 3. Top Dip (Right)
+                Group {
+                    if let dip = viewModel.topDip {
+                        Button {
+                            viewModel.selectedCoinForDetail = dip
+                        } label: {
+                            topDipContent(dip)
                         }
+                        .buttonStyle(.plain)
+                    } else {
+                        placeholderMetric(title: "Top Dip", alignment: .trailing)
                     }
-                    .buttonStyle(.plain)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                } else {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Top Dip")
-                            .font(.caption2)
-                            .foregroundStyle(Color.theme.secondaryText)
-                        Text("—")
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundStyle(Color.theme.secondaryText)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
+                .frame(maxWidth: .infinity, alignment: .trailing)
             }
         }
         .padding(14)
@@ -360,6 +485,70 @@ extension WatchlistView {
                         .stroke(Color.theme.secondaryText.opacity(0.12), lineWidth: 1)
                 )
         )
+    }
+
+    // MARK: - Helper Views for Clean Layout Alignment
+
+    @ViewBuilder
+    private func topGainerContent(_ coin: CoinModel) -> some View {
+        VStack(alignment: .center, spacing: 4) {
+            Text("Top Gainer")
+                .font(.caption2)
+                .foregroundStyle(Color.theme.secondaryText)
+             
+            VStack(spacing: 2) {
+                HStack(spacing: 4) {
+                    CoinImageView(coin: coin)
+                        .frame(width: 14, height: 14)
+                        .clipShape(Circle())
+                     
+                    Text(coin.symbol.uppercased())
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(Color.theme.accent)
+                }
+                 
+                Text("+" + (coin.priceChangePercentage24H?.asPercentString() ?? "0%"))
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(Color.theme.green)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func topDipContent(_ coin: CoinModel) -> some View {
+        VStack(alignment: .trailing, spacing: 4) {
+            Text("Top Dip")
+                .font(.caption2)
+                .foregroundStyle(Color.theme.secondaryText)
+             
+            VStack(spacing: 2) {
+                HStack(spacing: 4) {
+                    CoinImageView(coin: coin)
+                        .frame(width: 14, height: 14)
+                        .clipShape(Circle())
+                     
+                    Text(coin.symbol.uppercased())
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(Color.theme.accent)
+                }
+                 
+                Text(coin.priceChangePercentage24H?.asPercentString() ?? "0%")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(Color.theme.red)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func placeholderMetric(title: String, alignment: Alignment = .center) -> some View {
+        VStack(alignment: alignment == .trailing ? .trailing : (alignment == .center ? .center : .leading), spacing: 4) {
+            Text(title)
+                .font(.caption2)
+                .foregroundStyle(Color.theme.secondaryText)
+            Text("—")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(Color.theme.secondaryText)
+        }
     }
 }
 

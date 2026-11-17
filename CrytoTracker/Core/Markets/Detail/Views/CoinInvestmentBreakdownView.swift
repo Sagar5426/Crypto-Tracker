@@ -6,7 +6,6 @@
 //
 
 import SwiftUI
-import UIKit
 
 @MainActor
 struct CoinInvestmentBreakdownView: View {
@@ -22,19 +21,49 @@ struct CoinInvestmentBreakdownView: View {
     
     var body: some View {
         NavigationStack {
-            ZStack {
-                Color.theme.screenBackground.ignoresSafeArea()
+            List {
+                // Section 1: Overview Holding Position Card
+                Section {
+                    holdingSummaryCard
+                        .listRowInsets(EdgeInsets(top: 12, leading: 16, bottom: 8, trailing: 16))
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(Color.clear)
+                }
                 
-                ScrollView {
-                    VStack(spacing: 20) {
-                        holdingSummaryCard
-                        transactionsSection
+                // Section 2: Purchase Transactions with Apple Native Swipe Actions
+                Section {
+                    if viewModel.purchaseLots.isEmpty {
+                        emptyTransactionsPlaceholder
+                            .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 24, trailing: 16))
+                            .listRowSeparator(.hidden)
+                            .listRowBackground(Color.clear)
+                    } else {
+                        ForEach(viewModel.purchaseLots) { lot in
+                            PurchaseLotCardRow(
+                                lot: lot,
+                                coin: viewModel.currentCoin
+                            )
+                            .listRowInsets(EdgeInsets(top: 5, leading: 16, bottom: 5, trailing: 16))
+                            .listRowSeparator(.hidden)
+                            .listRowBackground(Color.clear)
+                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                Button {
+                                    viewModel.editLot(lot)
+                                } label: {
+                                    Label("Edit", systemImage: "pencil")
+                                }
+                                .tint(.blue)
+                            }
+                        }
                     }
-                    .padding(.horizontal)
-                    .padding(.top, 12)
-                    .padding(.bottom, 24)
+                } header: {
+                    transactionsSectionHeader
+                        .listRowInsets(EdgeInsets(top: 16, leading: 16, bottom: 8, trailing: 16))
                 }
             }
+            .listStyle(.plain)
+            .scrollContentBackground(.hidden)
+            .background(Color.theme.screenBackground.ignoresSafeArea())
             .navigationTitle("\(viewModel.currentCoin.name) Breakdown")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -189,7 +218,7 @@ extension CoinInvestmentBreakdownView {
                 
                 Spacer()
                 
-                Text("\((viewModel.currentCoin.profitLoss >= 0 ? "+" : ""))\(viewModel.currentCoin.profitLoss.asCurrencyWith2Decimals()) (\((viewModel.currentCoin.profitLoss >= 0 ? "+" : ""))\(viewModel.currentCoin.profitLossPercentage.asPercentString()))")
+                Text("\(viewModel.currentCoin.profitLoss >= 0 ? "+" : "")\(viewModel.currentCoin.profitLoss.asCurrencyWith2Decimals()) (\(viewModel.currentCoin.profitLoss >= 0 ? "+" : "")\(viewModel.currentCoin.profitLossPercentage.asPercentString()))")
                     .font(.subheadline)
                     .fontWeight(.bold)
                     .foregroundStyle(viewModel.currentCoin.profitLoss >= 0 ? Color.theme.green : Color.theme.red)
@@ -207,44 +236,28 @@ extension CoinInvestmentBreakdownView {
         )
     }
     
-    // MARK: - Transactions Section
-    private var transactionsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 6) {
-                Image(systemName: "clock.arrow.circlepath")
-                    .font(.subheadline)
-                    .foregroundStyle(Color.theme.accent)
-                
-                Text("Purchase Transactions")
-                    .font(.headline)
-                    .fontWeight(.bold)
-                    .foregroundStyle(Color.theme.accent)
-                
-                Spacer()
-                
-                Text("\(viewModel.purchaseLots.count) \(viewModel.purchaseLots.count == 1 ? "Lot" : "Lots")")
-                    .font(.caption2)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(Color.theme.secondaryText)
-            }
-            .padding(.top, 4)
+    // MARK: - Transactions Header
+    private var transactionsSectionHeader: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "clock.arrow.circlepath")
+                .font(.subheadline)
+                .foregroundStyle(Color.theme.accent)
             
-            if viewModel.purchaseLots.isEmpty {
-                emptyTransactionsPlaceholder
-            } else {
-                VStack(spacing: 10) {
-                    ForEach(viewModel.purchaseLots) { lot in
-                        SlideToEditTransactionRow(
-                            lot: lot,
-                            coin: viewModel.currentCoin,
-                            swipedLotId: $viewModel.swipedLotId,
-                            onEdit: {
-                                viewModel.editLot(lot)
-                            }
-                        )
-                    }
-                }
-            }
+            Text("Purchase Transactions")
+                .font(.headline)
+                .fontWeight(.bold)
+                .foregroundStyle(Color.theme.accent)
+            
+            Spacer()
+            
+            Text("\(viewModel.purchaseLots.count) \(viewModel.purchaseLots.count == 1 ? "Lot" : "Lots")")
+                .font(.caption2)
+                .fontWeight(.bold)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(Color.theme.secondaryText.opacity(0.12))
+                .clipShape(Capsule())
+                .foregroundStyle(Color.theme.secondaryText)
         }
     }
     
@@ -273,138 +286,152 @@ extension CoinInvestmentBreakdownView {
     }
 }
 
-// MARK: - Slide To Edit Transaction Row Component
-private struct SlideToEditTransactionRow: View {
+// MARK: - Redesigned Transaction Lot Card Row Component (Matching TradeRowCard Layout)
+private struct PurchaseLotCardRow: View {
     let lot: CoinInvestmentBreakdownView.PurchaseLot
     let coin: CoinModel
-    @Binding var swipedLotId: String?
-    let onEdit: () -> Void
     
-    @State private var dragOffset: CGFloat = 0
-    private let actionWidth: CGFloat = 84
+    private var badgeColor: Color {
+        Color.theme.green
+    }
     
-    private var isSwipedOpen: Bool {
-        swipedLotId == lot.id
+    private var executionDate: Date {
+        lot.date
     }
     
     private var totalCost: Double {
         lot.amount * lot.pricePerCoin
     }
     
-    private var currentValue: Double {
-        lot.amount * coin.currentPrice
-    }
-    
-    private var lotProfitLoss: Double {
-        currentValue - totalCost
-    }
-    
-    private var lotProfitLossPercentage: Double {
-        guard totalCost > 0 else { return 0 }
-        return ((currentValue - totalCost) / totalCost) * 100
-    }
-    
     var body: some View {
-        ZStack(alignment: .trailing) {
-            // Background Action Button revealed on swipe
-            HStack {
-                Spacer()
-                Button {
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                        dragOffset = 0
-                        swipedLotId = nil
+        VStack(alignment: .leading, spacing: 10) {
+            // 1. Top Header Row: Coin Icon + Name + Symbol & Date on Left, BUY ORDER Badge on Right
+            HStack(alignment: .center, spacing: 10) {
+                coinIconView
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 5) {
+                        Text(coin.name)
+                            .font(.system(size: 15, weight: .bold, design: .rounded))
+                            .foregroundStyle(Color.theme.accent)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                        
+                        Text(coin.symbol.uppercased())
+                            .font(.system(size: 9.5, weight: .bold))
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 1.5)
+                            .background(Color.theme.secondaryText.opacity(0.1))
+                            .foregroundStyle(Color.theme.secondaryText)
+                            .clipShape(Capsule())
+                            .lineLimit(1)
                     }
-                    onEdit()
-                } label: {
-                    VStack(spacing: 4) {
-                        Image(systemName: "pencil")
-                            .font(.system(size: 16, weight: .bold))
-                        Text("Edit")
-                            .font(.system(size: 11, weight: .semibold))
-                    }
-                    .foregroundStyle(.white)
-                    .frame(width: actionWidth, height: 76)
-                    .background(Color.blue)
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                    
+                    Text(executionDate.formatted(date: .abbreviated, time: .shortened))
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(Color.theme.secondaryText)
+                        .lineLimit(1)
                 }
+                
+                Spacer(minLength: 8)
+                
+                // Order Type Badge (BUY ORDER)
+                Text("BUY ORDER")
+                    .font(.system(size: 9.5, weight: .heavy))
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(badgeColor.opacity(0.14))
+                    .foregroundStyle(badgeColor)
+                    .clipShape(Capsule())
+                    .lineLimit(1)
             }
             
-            // Foreground Content Card
-            HStack(spacing: 12) {
-                // Left Icon & Date Info
-                VStack(alignment: .leading, spacing: 3) {
-                    HStack(spacing: 5) {
-                        Image(systemName: "arrow.down.left.circle.fill")
-                            .foregroundStyle(Color.theme.green)
-                            .font(.subheadline)
+            // 2. Structured Data Section
+            VStack(spacing: 8) {
+                HStack(alignment: .top) {
+                    // Qty Bought
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Qty Bought")
+                            .font(.system(size: 10.5, weight: .semibold))
+                            .foregroundStyle(Color.theme.secondaryText)
                         
-                        Text("Bought \(lot.amount.asNumberString()) \(coin.symbol.uppercased())")
-                            .font(.subheadline)
-                            .fontWeight(.bold)
-                            .foregroundStyle(Color.theme.accent)
+                        Text(formatUnits(lot.amount) + " " + coin.symbol.uppercased())
+                            .font(.system(size: 13, weight: .bold, design: .rounded))
+                            .foregroundStyle(badgeColor)
+                            .lineLimit(1)
                     }
                     
-                    Text(lot.date.asShortDateString())
-                        .font(.caption2)
-                        .foregroundStyle(Color.theme.secondaryText)
+                    Spacer()
+                    
+                    // Buying Price
+                    VStack(alignment: .trailing, spacing: 2) {
+                        Text("Buying Price")
+                            .font(.system(size: 10.5, weight: .semibold))
+                            .foregroundStyle(Color.theme.secondaryText)
+                        
+                        Text(lot.pricePerCoin.asFormattedPrice())
+                            .font(.system(size: 13, weight: .bold, design: .rounded))
+                            .foregroundStyle(Color.theme.accent)
+                            .monospacedDigit()
+                            .lineLimit(1)
+                    }
                 }
                 
-                Spacer()
+                Divider()
+                    .background(Color.theme.secondaryText.opacity(0.08))
                 
-                // Right Financial Info
-                VStack(alignment: .trailing, spacing: 3) {
-                    Text(totalCost.asCurrencyWith2Decimals())
-                        .font(.subheadline)
-                        .fontWeight(.bold)
-                        .foregroundStyle(Color.theme.accent)
+                // Buying Total Value
+                HStack(alignment: .center) {
+                    Text("Buying Total Value")
+                        .font(.system(size: 11.5, weight: .semibold))
+                        .foregroundStyle(Color.theme.secondaryText)
                     
-                    HStack(spacing: 2) {
-                        Image(systemName: lotProfitLoss >= 0 ? "arrow.up.right" : "arrow.down.right")
-                            .font(.system(size: 8, weight: .bold))
-                        Text("\(lotProfitLoss >= 0 ? "+" : "")\(lotProfitLossPercentage.asPercentString())")
-                            .font(.caption2)
-                            .fontWeight(.semibold)
-                    }
-                    .foregroundStyle(lotProfitLoss >= 0 ? Color.theme.green : Color.theme.red)
+                    Spacer()
+                    
+                    Text(totalCost.asCurrencyWith2Decimals())
+                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .foregroundStyle(Color.theme.accent)
+                        .monospacedDigit()
+                        .lineLimit(1)
                 }
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 12)
-            .background(
-                RoundedRectangle(cornerRadius: 14)
-                    .fill(Color.theme.background)
-                    .shadow(color: Color.theme.accent.opacity(0.03), radius: 5, x: 0, y: 1)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 14)
-                    .stroke(Color.theme.secondaryText.opacity(0.1), lineWidth: 1)
-            )
-            .offset(x: dragOffset)
-            .gesture(
-                DragGesture(minimumDistance: 15, coordinateSpace: .local)
-                    .onChanged { value in
-                        if value.translation.width < 0 {
-                            // Swiping left to reveal edit button
-                            dragOffset = max(value.translation.width, -actionWidth)
-                        } else if isSwipedOpen && value.translation.width > 0 {
-                            // Swiping right to close
-                            dragOffset = min(-actionWidth + value.translation.width, 0)
-                        }
-                    }
-                    .onEnded { value in
-                        withAnimation(.spring(response: 0.32, dampingFraction: 0.78)) {
-                            if value.translation.width < -35 {
-                                dragOffset = -actionWidth
-                                swipedLotId = lot.id
-                                HapticManager.impact(style: .light)
-                            } else {
-                                dragOffset = 0
-                                if swipedLotId == lot.id {
-                                    swipedLotId = nil
-                                }
-                            }
-                        }
-                    }
+            .padding(10)
+            .background(Color.theme.secondaryText.opacity(0.04))
+            .clipShape(RoundedRectangle(cornerRadius: 11, style: .continuous))
+        }
+        .padding(13)
+        .background(
+            RoundedRectangle(cornerRadius: 15, style: .continuous)
+                .fill(Color.theme.background)
+                .shadow(color: Color.theme.accent.opacity(0.04), radius: 6, x: 0, y: 2)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 15, style: .continuous)
+                .stroke(Color.theme.secondaryText.opacity(0.1), lineWidth: 1)
+        )
+    }
+    
+    private var coinIconView: some View {
+        ZStack {
+            Circle()
+                .fill(Color.theme.secondaryText.opacity(0.08))
+                .frame(width: 36, height: 36)
+            
+            CoinImageView(coin: coin)
+                .frame(width: 32, height: 32)
+                .clipShape(Circle())
+        }
+    }
+    
+    private func formatUnits(_ amount: Double) -> String {
+        let absVal = abs(amount)
+        if absVal >= 1.0 {
+            return amount.asNumberString()
+        } else {
+            return String(format: "%.4f", amount).replacingOccurrences(
+                of: #"(\.\d*?[1-9])0+$|\.0+$"#,
+                with: "$1",
+                options: .regularExpression
             )
         }
     }

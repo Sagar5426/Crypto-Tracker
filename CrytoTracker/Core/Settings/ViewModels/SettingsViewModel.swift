@@ -35,6 +35,7 @@ final class SettingsViewModel: ObservableObject {
     @Published var showClearCacheAlert: Bool = false
     @Published var showResetWalletAlert: Bool = false
     @Published var toastMessage: String? = nil
+    @Published var showCashWalletView: Bool = false
     @Published var showProfitAndLossView: Bool = false
     @Published var showTradeBookView: Bool = false
     
@@ -140,6 +141,11 @@ final class SettingsViewModel: ObservableObject {
     func refreshMarketData() {
         marketViewModel?.reloadData()
         showToast("Market data synced!")
+    }
+    
+    func openCashWallet() {
+        showCashWalletView = true
+        HapticManager.impact(style: .light)
     }
     
     func showToast(_ text: String) {

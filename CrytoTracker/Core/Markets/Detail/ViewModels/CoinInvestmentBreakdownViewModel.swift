@@ -24,7 +24,6 @@ final class CoinInvestmentBreakdownViewModel: ObservableObject {
     @Published var currentCoin: CoinModel
     @Published var purchaseLots: [PurchaseLot] = []
     @Published var editingLot: PurchaseLot? = nil
-    @Published var swipedLotId: String? = nil
     
     // MARK: - Dependencies
     

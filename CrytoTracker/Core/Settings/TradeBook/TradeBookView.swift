@@ -818,7 +818,7 @@ struct TradeReceiptDetailSheet: View {
                                 Image(systemName: "chart.line.uptrend.xyaxis")
                                 Text("View \(live.name) in Markets")
                             }
-                            .font(.headline)
+                            .font(.subheadline)
                             .fontWeight(.bold)
                             .frame(maxWidth: .infinity)
                             .frame(height: 48)
@@ -869,7 +869,7 @@ struct TradeReceiptDetailSheet: View {
                         .font(.headline)
                         .fontWeight(.bold)
                         .foregroundStyle(Color.theme.accent)
-                        .lineLimit(1)
+                        .lineLimit(2)
                     
                     HStack(spacing: 5) {
                         Text((trade.coinSymbol ?? "").uppercased())
