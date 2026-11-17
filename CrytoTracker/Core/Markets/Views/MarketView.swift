@@ -10,6 +10,7 @@ import SwiftfulUI
 
 struct MarketView: View {
     
+    @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject private var vm: MarketViewModel
     @State private var showSearchBar: Bool = false
     @State private var selectedCoinForDetail: CoinModel? = nil
@@ -20,8 +21,8 @@ struct MarketView: View {
     var body: some View {
         NavigationStack {
             ZStack(alignment: .top) {
-                // Base background
-                Color.black
+                // Base adaptive background
+                Color.theme.screenBackground
                     .ignoresSafeArea()
                 
                 // Dynamic ambient crypto gradient glow that scrolls synchronously & fades out together
@@ -100,8 +101,8 @@ extension MarketView {
             // Multi-stop linear gradient for rich ambient background fade
             LinearGradient(
                 stops: [
-                    .init(color: Color.theme.accent.opacity(0.18), location: 0.0),
-                    .init(color: Color.theme.accent.opacity(0.08), location: 0.35),
+                    .init(color: (colorScheme == .dark ? Color.theme.accent.opacity(0.18) : Color.theme.green.opacity(0.08)), location: 0.0),
+                    .init(color: (colorScheme == .dark ? Color.theme.accent.opacity(0.08) : Color.theme.green.opacity(0.03)), location: 0.35),
                     .init(color: Color.theme.green.opacity(0.05), location: 0.65),
                     .init(color: Color.clear, location: 1.0)
                 ],
@@ -124,8 +125,8 @@ extension MarketView {
             // Soft ambient accent aura on top-leading
             RadialGradient(
                 gradient: Gradient(colors: [
-                    Color.theme.accent.opacity(0.12),
-                    Color.theme.accent.opacity(0.03),
+                    (colorScheme == .dark ? Color.theme.accent.opacity(0.12) : Color.blue.opacity(0.06)),
+                    (colorScheme == .dark ? Color.theme.accent.opacity(0.03) : Color.blue.opacity(0.02)),
                     Color.clear
                 ]),
                 center: .topLeading,
@@ -178,36 +179,58 @@ extension MarketView {
                     }
             }
         )
-        .allowsHitTesting(collapseProgress < 0.85)
     }
     
-    // MARK: - Scroll View Layer
+    // MARK: - Main Scroll Content with Sticky Filter Chips & Coins
     private var scrollViewLayer: some View {
         ScrollViewWithOnScrollChanged(
             .vertical,
             showsIndicators: false,
             content: {
                 LazyVStack(spacing: 12, pinnedViews: [.sectionHeaders]) {
-                    // Collapsible Top Section (measured dynamically)
+                    // Collapsible Top Section (Hero Header + MarketStatsView)
                     topCollapsibleSection
                         .zIndex(1)
                     
-                    // Sticky Section: Filter chips stick at the top, below views scroll strictly underneath
+                    // Search Bar Dropdown (when toggled from header)
+                    if showSearchBar {
+                        SearchBarView(searchText: $vm.searchText)
+                            .transition(.move(edge: .top).combined(with: .opacity))
+                            .zIndex(1)
+                    }
+                    
+                    // Sticky Filter Chips & Content
                     Section {
-                        // Top Gainers & Top Losers strips
-                        if vm.searchText.isEmpty {
-                            // Top Gainers: kept intact in 'All' or when 'Gainers' chip is selected
-                            if (vm.marketCategory == .all || vm.marketCategory == .gainers) && !vm.topMovers.isEmpty {
-                                topMoversSection
-                                    .zIndex(0)
-                                    .transition(.opacity.combined(with: .scale(scale: 0.98, anchor: .top)))
+                        // Top Movers & Losers (Only shown in "All" category when not searching)
+                        if vm.marketCategory == .all && vm.searchText.isEmpty {
+                            VStack(spacing: 10) {
+                                if !vm.topMovers.isEmpty {
+                                    topMoversSection
+                                        .transition(.opacity.combined(with: .scale(scale: 0.98, anchor: .top)))
+                                }
+                                
+                                if !vm.topLosers.isEmpty {
+                                    topLosersSection
+                                        .transition(.opacity.combined(with: .scale(scale: 0.98, anchor: .top)))
+                                }
                             }
-                            
-                            // Top Losers: kept intact in 'All' or when 'Losers' chip is selected
-                            if (vm.marketCategory == .all || vm.marketCategory == .losers) && !vm.topLosers.isEmpty {
-                                topLosersSection
-                                    .zIndex(0)
-                                    .transition(.opacity.combined(with: .scale(scale: 0.98, anchor: .top)))
+                            .padding(.top, 4)
+                            .padding(.bottom, 2)
+                        } else if vm.searchText.isEmpty {
+                            // Category Banner for Gainers / Losers / Top 10
+                            if let desc = vm.marketCategory.description {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "info.circle.fill")
+                                        .font(.caption2)
+                                        .foregroundStyle(Color.theme.secondaryText)
+                                    Text(desc)
+                                        .font(.caption2)
+                                        .foregroundStyle(Color.theme.secondaryText)
+                                    Spacer()
+                                }
+                                .padding(.horizontal, 20)
+                                .padding(.top, 2)
+                                .transition(.opacity.combined(with: .scale(scale: 0.98, anchor: .top)))
                             }
                         }
                         
@@ -271,9 +294,9 @@ extension MarketView {
                             .padding(.vertical, 7)
                             .background(
                                 ZStack {
-                                    // Opaque base so individual chips are never see-through
+                                    // Opaque adaptive base so individual chips are never see-through
                                     Capsule()
-                                        .fill(Color.black)
+                                        .fill(Color.theme.screenBackground)
                                     
                                     Capsule()
                                         .fill(isSelected ? Color.theme.accent : Color.theme.secondaryText.opacity(0.12))
@@ -300,12 +323,12 @@ extension MarketView {
         }
         .background(
             ZStack(alignment: .top) {
-                // 1. Solid black background strictly inside filterChipsRow bounds (never overlaps MarketStatsView)
-                Color.black
+                // 1. Adaptive solid background strictly inside filterChipsRow bounds (never overlaps MarketStatsView)
+                Color.theme.screenBackground
                     .opacity(chipRowBackgroundOpacity)
                 
                 // 2. Top safe area shield that locks in as the header finishes collapsing
-                Color.black
+                Color.theme.screenBackground
                     .frame(height: topSafeAreaInset + 2)
                     .offset(y: -topSafeAreaInset)
                     .ignoresSafeArea(edges: .top)

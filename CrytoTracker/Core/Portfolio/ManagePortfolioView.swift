@@ -9,6 +9,7 @@ import SwiftUI
 
 struct ManagePortfolioView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject private var vm: MarketViewModel
     
     // Initializer context
@@ -109,7 +110,7 @@ struct ManagePortfolioView: View {
     var body: some View {
         NavigationStack {
             ZStack(alignment: .top) {
-                Color.black
+                Color.theme.screenBackground
                     .ignoresSafeArea()
                 
                 // Ambient glow layer that dynamically adjusts based on mode & buy/sell
@@ -153,7 +154,7 @@ struct ManagePortfolioView: View {
 extension ManagePortfolioView {
     
     private var ambientGlowLayer: some View {
-        let activeColor = activeCoin != nil ? themeColor : Color.theme.accent
+        let activeColor = activeCoin != nil ? themeColor : (colorScheme == .dark ? Color.theme.accent : Color.theme.green)
         
         return ZStack {
             LinearGradient(
@@ -439,7 +440,7 @@ extension ManagePortfolioView {
                         .foregroundStyle(Color.theme.accent)
                         .lineLimit(1)
                     
-                    Text("\((coin.currentHoldings ?? 0).asNumberString()) \(coin.symbol.uppercased())")
+                    Text("\((coin.currentHoldings ?? 0).asFormattedQuantity()) \(coin.symbol.uppercased())")
                         .font(.caption2)
                         .fontWeight(.semibold)
                         .foregroundStyle(Color.theme.secondaryText)
@@ -579,7 +580,7 @@ extension ManagePortfolioView {
             } label: {
                 HStack(spacing: 6) {
                     Image(systemName: "magnifyingglass")
-                        Text("Explore Cryptos to Buy")
+                    Text("Explore Cryptos to Buy")
                 }
                 .font(.subheadline)
                 .fontWeight(.bold)
@@ -898,7 +899,7 @@ extension ManagePortfolioView {
                         .tracking(0.4)
                         .foregroundStyle(Color.theme.secondaryText)
                     
-                    Text("\(currentHolding.asNumberString()) \(coin.symbol.uppercased())")
+                    Text("\(currentHolding.asFormattedQuantity()) \(coin.symbol.uppercased())")
                         .font(.system(size: 13, weight: .bold, design: .rounded))
                         .foregroundStyle(currentHolding > 0 ? Color.theme.accent : Color.theme.secondaryText)
                 }
@@ -956,125 +957,107 @@ extension ManagePortfolioView {
         )
     }
     
-    // MARK: - Amount Input Card & Conversion
+    // MARK: - Amount Input Studio Box
     private func amountInputCard(coin: CoinModel, currentHolding: Double, tradeAmount: Double) -> some View {
         VStack(spacing: 14) {
-            // Header Row: Input Mode Selector + Clear Button
+            // Mode Selector: Dollar Amount vs Token Quantity
             HStack {
-                // Currency vs Token Toggle Pill
-                Button {
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        inputMode = inputMode == .fiat ? .token : .fiat
-                    }
-                    HapticManager.selection()
-                } label: {
-                    HStack(spacing: 5) {
-                        Image(systemName: "arrow.triangle.2.circlepath")
-                            .font(.system(size: 10, weight: .bold))
-                        Text("Input: \(inputMode.rawValue)")
-                            .font(.system(size: 11, weight: .bold))
-                    }
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 5)
-                    .background(Color.theme.secondaryText.opacity(0.1))
-                    .foregroundStyle(Color.theme.accent)
-                    .clipShape(Capsule())
-                }
-                .buttonStyle(.plain)
+                Text("ORDER AMOUNT")
+                    .font(.system(size: 11, weight: .bold))
+                    .tracking(0.5)
+                    .foregroundStyle(Color.theme.secondaryText)
                 
                 Spacer()
                 
-                if !quantityText.isEmpty || !fiatText.isEmpty {
+                Picker("", selection: $inputMode) {
+                    ForEach(InputMode.allCases) { mode in
+                        Text(mode.rawValue).tag(mode)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .frame(width: 160)
+            }
+            
+            // Primary Interactive Input Field
+            HStack(alignment: .center, spacing: 8) {
+                if inputMode == .fiat {
+                    Text("$")
+                        .font(.system(size: 28, weight: .bold, design: .rounded))
+                        .foregroundStyle(Color.theme.accent)
+                    
+                    TextField("0.00", text: $fiatText)
+                        .font(.system(size: 32, weight: .black, design: .rounded))
+                        .keyboardType(.decimalPad)
+                        .foregroundStyle(Color.theme.accent)
+                        .onChange(of: fiatText) { _, newValue in
+                            syncFromFiat(newFiat: newValue, price: coin.currentPrice)
+                        }
+                } else {
+                    TextField("0.00", text: $quantityText)
+                        .font(.system(size: 32, weight: .black, design: .rounded))
+                        .keyboardType(.decimalPad)
+                        .foregroundStyle(Color.theme.accent)
+                        .onChange(of: quantityText) { _, newValue in
+                            syncFromQuantity(newQty: newValue, price: coin.currentPrice)
+                        }
+                    
+                    Text(coin.symbol.uppercased())
+                        .font(.system(size: 20, weight: .bold, design: .rounded))
+                        .foregroundStyle(Color.theme.secondaryText)
+                }
+            }
+            .padding(.vertical, 6)
+            
+            // Converted Equivalent Subtext
+            HStack {
+                if inputMode == .fiat {
+                    Text("≈ \(tradeAmount.asFormattedQuantity()) \(coin.symbol.uppercased())")
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(Color.theme.secondaryText)
+                } else {
+                    let totalVal = tradeAmount * coin.currentPrice
+                    Text("≈ \(totalVal.asCurrencyWith2Decimals())")
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(Color.theme.secondaryText)
+                }
+                
+                Spacer()
+                
+                if !fiatText.isEmpty || !quantityText.isEmpty {
                     Button("Clear") {
-                        quantityText = ""
                         fiatText = ""
-                        HapticManager.selection()
+                        quantityText = ""
                     }
                     .font(.caption)
                     .fontWeight(.bold)
-                    .foregroundStyle(Color.theme.red)
+                    .foregroundStyle(Color.theme.secondaryText)
                 }
             }
             
-            // Hero Large Amount Display Field
-            VStack(spacing: 6) {
-                HStack(alignment: .firstTextBaseline, spacing: 4) {
-                    if inputMode == .fiat {
-                        Text("$")
-                            .font(.system(size: 36, weight: .bold, design: .rounded))
-                            .foregroundStyle(themeColor)
-                        
-                        TextField("0", text: $fiatText)
-                            .font(.system(size: 38, weight: .bold, design: .rounded))
-                            .keyboardType(.decimalPad)
-                            .foregroundStyle(Color.theme.accent)
-                            .onChange(of: fiatText) { _, newFiat in
-                                syncFromFiat(newFiat: newFiat, price: coin.currentPrice)
-                            }
-                    } else {
-                        TextField("0", text: $quantityText)
-                            .font(.system(size: 38, weight: .bold, design: .rounded))
-                            .keyboardType(.decimalPad)
-                            .foregroundStyle(Color.theme.accent)
-                            .onChange(of: quantityText) { _, newQty in
-                                syncFromQuantity(newQty: newQty, price: coin.currentPrice)
-                            }
-                        
-                        Text(coin.symbol.uppercased())
-                            .font(.system(size: 22, weight: .bold, design: .rounded))
-                            .foregroundStyle(themeColor)
-                    }
-                }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 10)
-                .background(
-                    RoundedRectangle(cornerRadius: 14)
-                        .fill(Color.theme.secondaryText.opacity(0.06))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 14)
-                                .stroke(themeColor.opacity(0.25), lineWidth: 1)
-                        )
-                )
-                
-                // Equivalent Conversion Line
-                HStack(spacing: 4) {
-                    Image(systemName: "equal")
-                        .font(.system(size: 11, weight: .bold))
-                    
-                    if inputMode == .fiat {
-                        let qty = Double(quantityText) ?? 0
-                        Text("\(qty.asNumberString()) \(coin.symbol.uppercased())")
-                            .font(.system(size: 13, weight: .bold, design: .rounded))
-                    } else {
-                        let val = tradeAmount * coin.currentPrice
-                        Text(val.asCurrencyWith2Decimals())
-                            .font(.system(size: 13, weight: .bold, design: .rounded))
-                    }
-                }
-                .foregroundStyle(Color.theme.secondaryText)
-                .padding(.top, 2)
-            }
+            Divider()
+                .background(Color.theme.secondaryText.opacity(0.10))
             
-            // Smart Shortcuts: BUY Presets vs SELL Fraction Chips
+            // Quick Percentage & Quick Value Buttons
             if tradeType == .buy {
-                // Buy Cash Presets
+                // Buy Quick Cash Chips: +$100, +$500, +$1,000, MAX Cash
                 HStack(spacing: 8) {
-                    ForEach([50.0, 100.0, 500.0, 1000.0], id: \.self) { amount in
+                    ForEach([100.0, 500.0, 1000.0], id: \.self) { delta in
                         Button {
-                            addFiatAmount(delta: amount, price: coin.currentPrice)
+                            addFiatAmount(delta: delta, price: coin.currentPrice)
                         } label: {
-                            Text("+$\(Int(amount))")
+                            Text("+$\(Int(delta))")
                                 .font(.system(size: 12, weight: .bold))
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 8)
-                                .background(Color.theme.green.opacity(0.12))
+                                .background(Color.theme.secondaryText.opacity(0.1))
                                 .clipShape(Capsule())
-                                .foregroundStyle(Color.theme.green)
+                                .foregroundStyle(Color.theme.accent)
                         }
                         .buttonStyle(.plain)
                     }
                     
-                    // Max Cash Option
                     Button {
                         setFiatAmount(amount: vm.cashBalance, price: coin.currentPrice)
                     } label: {
@@ -1142,7 +1125,7 @@ extension ManagePortfolioView {
                 HStack(spacing: 8) {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .foregroundStyle(Color.theme.red)
-                    Text("Insufficient coins. You hold \(currentHolding.asNumberString()) \(coin.symbol.uppercased()).")
+                    Text("Insufficient coins. You hold \(currentHolding.asFormattedQuantity()) \(coin.symbol.uppercased()).")
                         .font(.caption)
                         .fontWeight(.bold)
                         .foregroundStyle(Color.theme.red)
@@ -1214,12 +1197,12 @@ extension ManagePortfolioView {
                         .foregroundStyle(Color.theme.secondaryText)
                     Spacer()
                     HStack(spacing: 5) {
-                        Text("\(currentHolding.asNumberString())")
+                        Text("\(currentHolding.asFormattedQuantity())")
                             .foregroundStyle(Color.theme.secondaryText)
                         Image(systemName: "arrow.right")
                             .font(.caption2)
                             .foregroundStyle(Color.theme.secondaryText)
-                        Text("\(resultingHolding.asNumberString()) \(coin.symbol.uppercased())")
+                        Text("\(resultingHolding.asFormattedQuantity()) \(coin.symbol.uppercased())")
                             .fontWeight(.bold)
                             .foregroundStyle(Color.theme.accent)
                     }
@@ -1353,7 +1336,7 @@ extension ManagePortfolioView {
                         Spacer()
                         
                         VStack(alignment: .trailing, spacing: 2) {
-                            Text((isBuy ? "+" : "-") + "\(tx.amount.asNumberString()) \(symbol)")
+                            Text((isBuy ? "+" : "-") + "\(tx.amount.asFormattedQuantity()) \(symbol)")
                                 .font(.system(size: 12, weight: .bold, design: .rounded))
                                 .foregroundStyle(isBuy ? Color.theme.green : Color.theme.red)
                             
@@ -1408,7 +1391,7 @@ extension ManagePortfolioView {
         guard inputMode == .fiat else { return }
         if let fiat = Double(newFiat), price > 0 {
             let qty = fiat / price
-            quantityText = qty.truncatingRemainder(dividingBy: 1) == 0 ? String(format: "%.0f", qty) : String(format: "%.4f", qty)
+            quantityText = qty.asRawQuantityString()
         } else {
             quantityText = ""
         }
@@ -1421,7 +1404,7 @@ extension ManagePortfolioView {
         fiatText = newFiat.truncatingRemainder(dividingBy: 1) == 0 ? String(format: "%.0f", newFiat) : String(format: "%.2f", newFiat)
         if price > 0 {
             let qty = newFiat / price
-            quantityText = qty.truncatingRemainder(dividingBy: 1) == 0 ? String(format: "%.0f", qty) : String(format: "%.4f", qty)
+            quantityText = qty.asRawQuantityString()
         }
         HapticManager.notification(type: .success)
     }
@@ -1431,7 +1414,7 @@ extension ManagePortfolioView {
         fiatText = amount.truncatingRemainder(dividingBy: 1) == 0 ? String(format: "%.0f", amount) : String(format: "%.2f", amount)
         if price > 0 {
             let qty = amount / price
-            quantityText = qty.truncatingRemainder(dividingBy: 1) == 0 ? String(format: "%.0f", qty) : String(format: "%.4f", qty)
+            quantityText = qty.asRawQuantityString()
         }
         HapticManager.notification(type: .success)
     }
@@ -1439,7 +1422,7 @@ extension ManagePortfolioView {
     private func setSellFraction(fraction: Double, currentHolding: Double, price: Double) {
         inputMode = .token
         let qtyToSell = currentHolding * fraction
-        quantityText = qtyToSell.truncatingRemainder(dividingBy: 1) == 0 ? String(format: "%.0f", qtyToSell) : String(format: "%.4f", qtyToSell)
+        quantityText = qtyToSell.asRawQuantityString()
         fiatText = String(format: "%.2f", qtyToSell * price)
         HapticManager.notification(type: .success)
     }

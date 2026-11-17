@@ -188,9 +188,6 @@ extension CoinInvestmentCard {
                 .foregroundStyle(colorizeValue ? tintColor : Color.theme.accent)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
-            
-            
-            
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .padding(.horizontal, 10)
@@ -205,7 +202,7 @@ extension CoinInvestmentCard {
 // MARK: - Previews with Mock Data
 #Preview("Coin Holding Card - Profitable (Dark)") {
     ZStack {
-        Color.theme.background.ignoresSafeArea()
+        Color.theme.screenBackground.ignoresSafeArea()
         CoinInvestmentCard(
             coin: DeveloperPreview.instance.coin,
             onViewBreakdownTapped: {}
@@ -217,7 +214,7 @@ extension CoinInvestmentCard {
 
 #Preview("Coin Holding Card - Loss (Dark)") {
     ZStack {
-        Color.theme.background.ignoresSafeArea()
+        Color.theme.screenBackground.ignoresSafeArea()
         CoinInvestmentCard(
             coin: DeveloperPreview.instance.adaCoin,
             onViewBreakdownTapped: {}
@@ -229,7 +226,7 @@ extension CoinInvestmentCard {
 
 #Preview("Coin Holding Card - Light Mode") {
     ZStack {
-        Color.theme.background.ignoresSafeArea()
+        Color.theme.screenBackground.ignoresSafeArea()
         CoinInvestmentCard(
             coin: DeveloperPreview.instance.coin,
             onViewBreakdownTapped: {}

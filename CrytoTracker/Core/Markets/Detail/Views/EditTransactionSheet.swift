@@ -60,7 +60,7 @@ struct EditTransactionSheet: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color.theme.background.ignoresSafeArea()
+                Color.theme.screenBackground.ignoresSafeArea()
                 
                 ScrollView {
                     VStack(spacing: 20) {

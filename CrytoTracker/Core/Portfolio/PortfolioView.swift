@@ -9,6 +9,7 @@ import SwiftUI
 import SwiftfulUI
 
 struct PortfolioView: View {
+    @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject private var vm: MarketViewModel
     @State private var showManageSheet = false
     @State private var selectedCoinToEdit: CoinModel? = nil
@@ -43,8 +44,8 @@ struct PortfolioView: View {
     var body: some View {
         NavigationStack {
             ZStack(alignment: .top) {
-                // Base background (black for deep OLED contrast)
-                Color.black
+                // Adaptive canvas background
+                Color.theme.screenBackground
                     .ignoresSafeArea()
                 
                 // Dynamic ambient crypto gradient glow that responds to scroll and P&L
@@ -109,7 +110,7 @@ extension PortfolioView {
                     Rectangle()
                         .fill(Color.clear)
                         .background(.ultraThinMaterial)
-                        .overlay(Color.black.opacity(0.35))
+                        .overlay(colorScheme == .dark ? Color.black.opacity(0.35) : Color.clear)
                         .ignoresSafeArea(edges: .top)
                     
                     // Subtle bottom separator line
@@ -136,8 +137,8 @@ extension PortfolioView {
             // Multi-stop linear gradient for rich ambient background fade
             LinearGradient(
                 stops: [
-                    .init(color: Color.theme.accent.opacity(0.18), location: 0.0),
-                    .init(color: Color.theme.accent.opacity(0.08), location: 0.35),
+                    .init(color: (colorScheme == .dark ? Color.theme.accent.opacity(0.18) : pnlColor.opacity(0.08)), location: 0.0),
+                    .init(color: (colorScheme == .dark ? Color.theme.accent.opacity(0.08) : pnlColor.opacity(0.03)), location: 0.35),
                     .init(color: pnlColor.opacity(0.05), location: 0.65),
                     .init(color: Color.clear, location: 1.0)
                 ],
@@ -148,8 +149,8 @@ extension PortfolioView {
             // Soft ambient P&L aura on top-trailing
             RadialGradient(
                 gradient: Gradient(colors: [
-                    pnlColor.opacity(0.14),
-                    pnlColor.opacity(0.04),
+                    pnlColor.opacity(colorScheme == .dark ? 0.14 : 0.08),
+                    pnlColor.opacity(colorScheme == .dark ? 0.04 : 0.02),
                     Color.clear
                 ]),
                 center: .topTrailing,
@@ -160,8 +161,8 @@ extension PortfolioView {
             // Soft ambient accent aura on top-leading
             RadialGradient(
                 gradient: Gradient(colors: [
-                    Color.theme.accent.opacity(0.12),
-                    Color.theme.accent.opacity(0.03),
+                    (colorScheme == .dark ? Color.theme.accent.opacity(0.12) : Color.blue.opacity(0.06)),
+                    (colorScheme == .dark ? Color.theme.accent.opacity(0.03) : Color.blue.opacity(0.02)),
                     Color.clear
                 ]),
                 center: .topLeading,

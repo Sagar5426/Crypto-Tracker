@@ -10,6 +10,7 @@ import SwiftfulUI
 
 struct ProfitAndLossView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject private var vm: MarketViewModel
     
     @State private var searchText: String = ""
@@ -112,7 +113,7 @@ struct ProfitAndLossView: View {
     
     var body: some View {
         ZStack(alignment: .top) {
-            Color.theme.background
+            Color.theme.screenBackground
                 .ignoresSafeArea()
             
             // Dynamic ambient crypto gradient glow that scrolls synchronously & fades out together
@@ -122,7 +123,7 @@ struct ProfitAndLossView: View {
                 // Header kept intact at the top
                 topBar
                     .background(
-                        Color.theme.background
+                        Color.theme.screenBackground
                             .ignoresSafeArea(edges: .top)
                             .opacity(headerBackgroundOpacity)
                     )
@@ -186,9 +187,9 @@ extension ProfitAndLossView {
             // Multi-stop linear gradient for rich ambient background fade
             LinearGradient(
                 stops: [
-                    .init(color: pnlColor.opacity(0.14), location: 0.0),
-                    .init(color: Color.theme.accent.opacity(0.07), location: 0.35),
-                    .init(color: pnlColor.opacity(0.03), location: 0.65),
+                    .init(color: pnlColor.opacity(colorScheme == .dark ? 0.14 : 0.08), location: 0.0),
+                    .init(color: (colorScheme == .dark ? Color.theme.accent.opacity(0.07) : pnlColor.opacity(0.03)), location: 0.35),
+                    .init(color: pnlColor.opacity(0.02), location: 0.65),
                     .init(color: Color.clear, location: 1.0)
                 ],
                 startPoint: .top,
@@ -198,8 +199,8 @@ extension ProfitAndLossView {
             // Soft ambient aura on top-trailing
             RadialGradient(
                 gradient: Gradient(colors: [
-                    pnlColor.opacity(0.12),
-                    pnlColor.opacity(0.03),
+                    pnlColor.opacity(colorScheme == .dark ? 0.12 : 0.06),
+                    pnlColor.opacity(0.02),
                     Color.clear
                 ]),
                 center: .topTrailing,
@@ -210,8 +211,7 @@ extension ProfitAndLossView {
             // Soft ambient accent aura on top-leading
             RadialGradient(
                 gradient: Gradient(colors: [
-                    Color.theme.accent.opacity(0.10),
-                    Color.theme.accent.opacity(0.02),
+                    (colorScheme == .dark ? Color.theme.accent.opacity(0.10) : pnlColor.opacity(0.04)),
                     Color.clear
                 ]),
                 center: .topLeading,
@@ -352,7 +352,7 @@ extension ProfitAndLossView {
                 .opacity(searchBarBackgroundOpacity)
         }
         .background(
-            Color.theme.background
+            Color.theme.screenBackground
                 .opacity(searchBarBackgroundOpacity)
         )
     }

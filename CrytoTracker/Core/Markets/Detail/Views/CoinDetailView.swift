@@ -69,7 +69,7 @@ struct CoinDetailView: View {
             .padding(.top, 8)
             .padding(.bottom, 12)
         }
-        .background(Color.theme.background.ignoresSafeArea())
+        .background(Color.theme.screenBackground.ignoresSafeArea())
         .navigationTitle(vm.coin.name)
         .navigationBarTitleDisplayMode(.inline)
         .safeAreaInset(edge: .bottom, spacing: 0) {
@@ -137,7 +137,7 @@ extension CoinDetailView {
                             .font(.title3)
                             .fontWeight(.bold)
                             .foregroundStyle(Color.theme.accent)
-                            .lineLimit(1)
+                            .lineLimit(2)
                         
                         Text(vm.coin.symbol.uppercased())
                             .font(.caption)
@@ -447,9 +447,9 @@ extension CoinDetailView {
             // Subtle progressive fade so scrolling cards blend smoothly under the dock
             LinearGradient(
                 colors: [
-                    Color.theme.background.opacity(0.0),
-                    Color.theme.background.opacity(0.75),
-                    Color.theme.background
+                    Color.theme.screenBackground.opacity(0.0),
+                    Color.theme.screenBackground.opacity(0.75),
+                    Color.theme.screenBackground
                 ],
                 startPoint: .top,
                 endPoint: .bottom

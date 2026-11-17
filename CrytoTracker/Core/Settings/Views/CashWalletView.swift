@@ -361,7 +361,7 @@ extension CashWalletView {
     
     private var executeActionButton: some View {
         let isDeposit = selectedMode == .deposit
-        let actionColor = isDeposit ? Color.theme.green : Color.theme.red
+        let actionColor = isDeposit ? Color.theme.green.opacity(0.8) : Color.theme.red.opacity(0.8)
         let title = isDeposit ? "Confirm Deposit of $\(String(format: "%.2f", enteredAmount))" : "Confirm Withdrawal of $\(String(format: "%.2f", enteredAmount))"
         
         return Button {

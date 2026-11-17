@@ -33,6 +33,15 @@ class MarketViewModel: ObservableObject {
         case losers = "Losers"
         case topTen = "Top 10"
         var id: String { rawValue }
+        
+        var description: String? {
+            switch self {
+            case .all: return nil
+            case .gainers: return "Showing top 24h market gainers"
+            case .losers: return "Showing top 24h market decliners"
+            case .topTen: return "Showing top 10 market cap cryptocurrencies"
+            }
+        }
     }
     
     var displayedCoins: [CoinModel] {

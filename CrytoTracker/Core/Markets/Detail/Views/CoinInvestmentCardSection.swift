@@ -54,7 +54,7 @@ struct CoinInvestmentCardSection: View {
 // MARK: - Previews
 #Preview("Coin Investment Card Section - Profitable (Dark)") {
     ZStack {
-        Color.theme.background.ignoresSafeArea()
+        Color.theme.screenBackground.ignoresSafeArea()
         CoinInvestmentCardSection(
             coin: DeveloperPreview.instance.coin
         )
@@ -66,7 +66,7 @@ struct CoinInvestmentCardSection: View {
 
 #Preview("Coin Investment Card Section - Loss (Dark)") {
     ZStack {
-        Color.theme.background.ignoresSafeArea()
+        Color.theme.screenBackground.ignoresSafeArea()
         CoinInvestmentCardSection(
             coin: DeveloperPreview.instance.adaCoin
         )
@@ -78,7 +78,7 @@ struct CoinInvestmentCardSection: View {
 
 #Preview("Coin Investment Card Section - Light Mode") {
     ZStack {
-        Color.theme.background.ignoresSafeArea()
+        Color.theme.screenBackground.ignoresSafeArea()
         CoinInvestmentCardSection(
             coin: DeveloperPreview.instance.coin
         )

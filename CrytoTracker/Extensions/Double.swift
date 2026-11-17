@@ -49,6 +49,29 @@ extension Double {
             return String(format: "%.2f", self)
         }
     
+    /// Converts a Double into a clean crypto quantity string with up to 8 decimal places for display.
+    /// Preserves full precision for small fractions (e.g. 0.00010526 BTC) without collapsing to 0.00.
+    func asFormattedQuantity(maxDecimals: Int = 8) -> String {
+        let formatter = NumberFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.numberStyle = .decimal
+        formatter.usesGroupingSeparator = true
+        formatter.minimumFractionDigits = 2
+        formatter.maximumFractionDigits = maxDecimals
+        return formatter.string(from: NSNumber(value: self)) ?? String(format: "%.\(maxDecimals)f", self)
+    }
+    
+    /// Converts a Double into a numeric string without grouping separators for editable inputs and calculations.
+    func asRawQuantityString(maxDecimals: Int = 8) -> String {
+        let formatter = NumberFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.numberStyle = .decimal
+        formatter.usesGroupingSeparator = false
+        formatter.minimumFractionDigits = 0
+        formatter.maximumFractionDigits = maxDecimals
+        return formatter.string(from: NSNumber(value: self)) ?? String(self)
+    }
+    
     func asPercentString() -> String {
         return asNumberString() + "%"
     }

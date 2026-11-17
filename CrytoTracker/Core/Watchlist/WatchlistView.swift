@@ -9,6 +9,7 @@ import SwiftUI
 import SwiftfulUI
 
 struct WatchlistView: View {
+    @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject private var vm: MarketViewModel
     @State private var searchText: String = ""
     @State private var showSearchBar: Bool = false
@@ -116,8 +117,8 @@ struct WatchlistView: View {
     var body: some View {
         NavigationStack {
             ZStack(alignment: .top) {
-                // Background & ambient glow
-                Color.black
+                // Adaptive canvas background & ambient glow
+                Color.theme.screenBackground
                     .ignoresSafeArea()
                 
                 ambientGlowLayer
@@ -126,7 +127,7 @@ struct WatchlistView: View {
                     // Header kept intact at the top
                     topBar
                         .background(
-                            Color.black
+                            Color.theme.screenBackground
                                 .ignoresSafeArea(edges: .top)
                                 .opacity(headerBackgroundOpacity)
                         )
@@ -199,7 +200,7 @@ extension WatchlistView {
             LinearGradient(
                 stops: [
                     .init(color: Color.yellow.opacity(0.12), location: 0.0),
-                    .init(color: Color.theme.accent.opacity(0.06), location: 0.35),
+                    .init(color: (colorScheme == .dark ? Color.theme.accent.opacity(0.06) : Color.yellow.opacity(0.04)), location: 0.35),
                     .init(color: Color.clear, location: 0.85)
                 ],
                 startPoint: .top,
@@ -360,18 +361,21 @@ extension WatchlistView {
                                 .font(.caption2)
                                 .foregroundStyle(Color.theme.secondaryText)
                             
-                            HStack(spacing: 4) {
-                                CoinImageView(coin: topGainer)
-                                    .frame(width: 14, height: 14)
-                                    .clipShape(Circle())
+                            VStack(spacing: 2) {
+                                HStack(spacing: 4) {
+                                    CoinImageView(coin: topGainer)
+                                        .frame(width: 14, height: 14)
+                                        .clipShape(Circle())
+                                    
+                                    Text(topGainer.symbol.uppercased())
+                                        .font(.system(size: 12, weight: .bold))
+                                        .foregroundStyle(Color.theme.accent)
+                                }
+                                    
+                                    Text("+\(topGainer.priceChangePercentage24H?.asPercentString() ?? "0%")")
+                                        .font(.system(size: 11, weight: .bold))
+                                        .foregroundStyle(Color.theme.green)
                                 
-                                Text(topGainer.symbol.uppercased())
-                                    .font(.system(size: 12, weight: .bold))
-                                    .foregroundStyle(Color.theme.accent)
-                                
-                                Text("+\(topGainer.priceChangePercentage24H?.asPercentString() ?? "0%")")
-                                    .font(.system(size: 11, weight: .bold))
-                                    .foregroundStyle(Color.theme.green)
                             }
                         }
                     }
@@ -399,14 +403,16 @@ extension WatchlistView {
                                 .font(.caption2)
                                 .foregroundStyle(Color.theme.secondaryText)
                             
-                            HStack(spacing: 4) {
-                                CoinImageView(coin: dip)
-                                    .frame(width: 14, height: 14)
-                                    .clipShape(Circle())
-                                
-                                Text(dip.symbol.uppercased())
-                                    .font(.system(size: 12, weight: .bold))
-                                    .foregroundStyle(Color.theme.accent)
+                            VStack(spacing: 2) {
+                                HStack(spacing: 4) {
+                                    CoinImageView(coin: dip)
+                                        .frame(width: 14, height: 14)
+                                        .clipShape(Circle())
+                                    
+                                    Text(dip.symbol.uppercased())
+                                        .font(.system(size: 12, weight: .bold))
+                                        .foregroundStyle(Color.theme.accent)
+                                }
                                 
                                 Text(dip.priceChangePercentage24H?.asPercentString() ?? "0%")
                                     .font(.system(size: 11, weight: .bold))
@@ -460,7 +466,7 @@ extension WatchlistView {
                 .opacity(filterBarBackgroundOpacity)
         }
         .background(
-            Color.black
+            Color.theme.screenBackground
                 .opacity(filterBarBackgroundOpacity)
         )
     }
@@ -1004,7 +1010,7 @@ struct AddWatchlistCoinsSheet: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color.theme.background
+                Color.theme.screenBackground
                     .ignoresSafeArea()
                 
                 VStack(spacing: 12) {
@@ -1116,9 +1122,4 @@ struct AddWatchlistCoinsSheet: View {
             }
         }
     }
-}
-
-#Preview {
-    WatchlistView()
-        .environmentObject(DeveloperPreview.instance.homeVM)
 }

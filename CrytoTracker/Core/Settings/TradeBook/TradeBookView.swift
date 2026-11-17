@@ -12,6 +12,7 @@ import SwiftfulUI
 /// crypto buy and sell trade orders executed in the application.
 struct TradeBookView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject private var vm: MarketViewModel
     
     // MARK: - State Properties
@@ -129,7 +130,7 @@ struct TradeBookView: View {
     
     var body: some View {
         ZStack(alignment: .top) {
-            Color.theme.background
+            Color.theme.screenBackground
                 .ignoresSafeArea()
             
             // Ambient trade glow background
@@ -139,7 +140,7 @@ struct TradeBookView: View {
                 // Header kept intact at the top
                 topBar
                     .background(
-                        Color.theme.background
+                        Color.theme.screenBackground
                             .ignoresSafeArea(edges: .top)
                             .opacity(headerBackgroundOpacity)
                     )
@@ -216,8 +217,8 @@ extension TradeBookView {
     private var ambientGlowBackground: some View {
         LinearGradient(
             stops: [
-                .init(color: Color.orange.opacity(0.08), location: 0.0),
-                .init(color: Color.theme.accent.opacity(0.03), location: 0.22),
+                .init(color: Color.orange.opacity(colorScheme == .dark ? 0.08 : 0.05), location: 0.0),
+                .init(color: colorScheme == .dark ? Color.theme.accent.opacity(0.03) : Color.orange.opacity(0.02), location: 0.22),
                 .init(color: Color.clear, location: 0.55)
             ],
             startPoint: .top,
@@ -381,7 +382,7 @@ extension TradeBookView {
                 .opacity(filterBarBackgroundOpacity)
         }
         .background(
-            Color.theme.background
+            Color.theme.screenBackground
                 .opacity(filterBarBackgroundOpacity)
         )
     }
@@ -897,7 +898,7 @@ struct TradeReceiptDetailSheet: View {
     
     var body: some View {
         ZStack {
-            Color.theme.background
+            Color.theme.screenBackground
                 .ignoresSafeArea()
             
             ScrollView {

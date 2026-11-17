@@ -10,6 +10,7 @@ import SwiftfulUI
 
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject private var vm: MarketViewModel
     
     var showsDismissButton: Bool = false
@@ -67,7 +68,7 @@ struct SettingsView: View {
         NavigationStack {
             ZStack(alignment: .top) {
                 // Background & ambient glow
-                Color.black
+                Color.theme.screenBackground
                     .ignoresSafeArea()
                 
                 ambientGlowLayer
@@ -128,8 +129,8 @@ extension SettingsView {
         ZStack {
             LinearGradient(
                 stops: [
-                    .init(color: Color.theme.accent.opacity(0.12), location: 0.0),
-                    .init(color: Color.theme.accent.opacity(0.04), location: 0.3),
+                    .init(color: (colorScheme == .dark ? Color.theme.accent.opacity(0.12) : Color.theme.green.opacity(0.06)), location: 0.0),
+                    .init(color: (colorScheme == .dark ? Color.theme.accent.opacity(0.04) : Color.theme.green.opacity(0.02)), location: 0.3),
                     .init(color: Color.clear, location: 0.8)
                 ],
                 startPoint: .top,
@@ -138,7 +139,7 @@ extension SettingsView {
             
             RadialGradient(
                 gradient: Gradient(colors: [
-                    Color.theme.accent.opacity(0.10),
+                    (colorScheme == .dark ? Color.theme.accent.opacity(0.10) : Color.theme.green.opacity(0.05)),
                     Color.clear
                 ]),
                 center: .topTrailing,
@@ -175,7 +176,7 @@ extension SettingsView {
                 Rectangle()
                     .fill(Color.clear)
                     .background(.ultraThinMaterial)
-                    .overlay(Color.black.opacity(0.35))
+                    .overlay(colorScheme == .dark ? Color.black.opacity(0.35) : Color.clear)
                     .ignoresSafeArea(edges: .top)
                 
                 // Subtle bottom separator line
@@ -253,19 +254,36 @@ extension SettingsView {
                     RoundedRectangle(cornerRadius: 18)
                         .fill(
                             LinearGradient(
-                                colors: [Color.theme.accent.opacity(0.18), Color.theme.accent.opacity(0.05)],
+                                colors: [
+                                    Color.theme.accent.opacity(colorScheme == .dark ? 0.18 : 0.08),
+                                    Color.theme.accent.opacity(colorScheme == .dark ? 0.05 : 0.02)
+                                ],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             )
                         )
                         .frame(width: 64, height: 64)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 18)
+                                .stroke(Color.theme.secondaryText.opacity(colorScheme == .dark ? 0.12 : 0.15), lineWidth: 1)
+                        )
                     
-                    Image("logo")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 44, height: 44)
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                        .shadow(color: Color.theme.accent.opacity(0.2), radius: 6, x: 0, y: 3)
+                    if colorScheme == .dark {
+                        Image("logo")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 44, height: 44)
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                            .shadow(color: Color.theme.accent.opacity(0.2), radius: 6, x: 0, y: 3)
+                    } else {
+                        Image("logo-transparent")
+                            .renderingMode(.template)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 44, height: 44)
+                            .foregroundStyle(Color.theme.accent)
+                            .shadow(color: Color.theme.accent.opacity(0.08), radius: 6, x: 0, y: 3)
+                    }
                 }
                 
                 VStack(alignment: .leading, spacing: 3) {
