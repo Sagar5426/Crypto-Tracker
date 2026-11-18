@@ -1,3 +1,4 @@
+
 # 💰 CoinPilot
 
 A modern iOS app built with **SwiftUI** and **Combine**, following a clean **MVVM architecture** for clarity, scalability, and testability.  
@@ -14,17 +15,32 @@ It’s designed with a strong architectural foundation to ensure smooth data flo
 
 ## 🖼️ Screenshots
 
-<img width="300" alt="Screenshot 1" src="https://github.com/user-attachments/assets/c4932a15-99e4-454f-a7c5-fdac2e47e4e8" />
-<img width="300" alt="Screenshot 2" src="https://github.com/user-attachments/assets/13f23595-4256-4cf5-af2f-f11708839cb4" />
-<img width="300" alt="Screenshot 3" src="https://github.com/user-attachments/assets/a0be3521-d740-4c59-a0a8-1cb9afc0b41b" />
-<img width="300" alt="Screenshot 4" src="https://github.com/user-attachments/assets/85ba5eea-193d-43de-9694-563010abf373" />
-<img width="300" alt="Screenshot 5" src="https://github.com/user-attachments/assets/70df3666-166a-4bd2-91f4-12854513bd0d" />
+<img width="300" alt="IMG_2848" src="https://github.com/user-attachments/assets/a7e08c93-1ff2-445b-a670-6c0539704f3c" />
+<img width="300" alt="IMG_2849" src="https://github.com/user-attachments/assets/8576fc70-d422-4f47-8db4-3d45f50047da" />
+<img width="300" alt="IMG_2850" src="https://github.com/user-attachments/assets/10886745-d9a3-4810-9825-22d74de86540" />
+<img width="300" alt="IMG_2851" src="https://github.com/user-attachments/assets/7d9e2e2d-33c5-4d99-9bd7-320b24bab7ad" />
+<img width="300" alt="IMG_2852" src="https://github.com/user-attachments/assets/8a031726-f0a0-4e7b-91a4-a3598397b959" />
+<img width="300" alt="IMG_2853" src="https://github.com/user-attachments/assets/3b2ffb48-c562-4523-91ca-47e29f2af368" />
+<img width="300" alt="IMG_2854" src="https://github.com/user-attachments/assets/c5230a45-dcc8-41f0-82b4-b3264cdcb139" />
+<img width="300" alt="IMG_2855" src="https://github.com/user-attachments/assets/7effe97f-739a-4ff4-96b1-0c52ebda5522" />
+<img width="300" alt="IMG_2856" src="https://github.com/user-attachments/assets/3ea9324f-8fd9-4f24-81fa-f71c1bf87f28" />
+<img width="300" alt="IMG_2857" src="https://github.com/user-attachments/assets/fe77ad4a-dd15-4374-a78a-b939f24953c8" />
+<img width="300" alt="IMG_2858" src="https://github.com/user-attachments/assets/94c47c87-cd2c-441d-945d-cc28d2a844d7" />
+<img width="300" alt="IMG_2859" src="https://github.com/user-attachments/assets/ec4c2a42-bf6d-43fc-9ee3-baf22f97dcb0" />
+<img width="300" alt="IMG_2860" src="https://github.com/user-attachments/assets/d65abd7c-4bbc-42c7-84e8-593f1b91a12a" />
+<img width="300" alt="IMG_2861" src="https://github.com/user-attachments/assets/a27c47d0-b409-4786-87c1-4593dc395b45" />
+<img width="300" alt="IMG_2862" src="https://github.com/user-attachments/assets/e8aaaa1f-e3d6-43fc-9eb2-78fb77277763" />
+<img width="300" alt="IMG_2863" src="https://github.com/user-attachments/assets/f31ddb76-8917-471c-9343-a5b76b4f7a82" />
+<img width="300" alt="IMG_2864" src="https://github.com/user-attachments/assets/b29977d8-425a-4eae-9c93-261f3ebc62c5" />
+<img width="300" alt="IMG_2865" src="https://github.com/user-attachments/assets/475c2c4a-5c8e-46cc-a395-545c24364f56" />
+
+
 
 ---
 
 ## 🎥 Screen Recording
 
-[Watch the demo →](https://github.com/user-attachments/assets/eb762127-37f2-4aaf-8414-5196a4f6617b)
+[Watch the demo →](https://youtube.com/shorts/SzIfOeg4r6o?si=r5leAdfasmI7t96M)
 
 ---
 
