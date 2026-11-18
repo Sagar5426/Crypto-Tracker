@@ -1,6 +1,6 @@
 //
-//  CrytoTrackerApp.swift
-//  CrytoTracker
+//  CoinPilotApp.swift
+//  CoinPilot
 //
 //  Created by Sagar Jangra on 30/07/2025.
 //
@@ -8,7 +8,7 @@
 import SwiftUI
 
 @main
-struct CrytoTrackerApp: App {
+struct CoinPilotApp: App {
     @StateObject private var vm = MarketViewModel()
     @State private var showLaunchView: Bool = true
     

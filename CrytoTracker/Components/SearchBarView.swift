@@ -1,6 +1,6 @@
 //
 //  SearchBarView.swift
-//  CrytoTracker
+//  CoinPilot
 //
 //  Created by Sagar Jangra on 27/09/2025.
 //

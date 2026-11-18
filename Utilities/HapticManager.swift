@@ -1,6 +1,6 @@
 //
 //  HapticManager.swift
-//  CrytoTracker
+//  CoinPilot
 //
 //  Created by Sagar Jangra on 29/09/2025.
 //

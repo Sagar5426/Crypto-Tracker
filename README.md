@@ -1,4 +1,4 @@
-# 💰 Crypto Tracker
+# 💰 CoinPilot
 
 A modern iOS app built with **SwiftUI** and **Combine**, following a clean **MVVM architecture** for clarity, scalability, and testability.  
 Powered by real-time data from the **[CoinGecko API](https://www.coingecko.com/en/api)**.
@@ -7,7 +7,7 @@ Powered by real-time data from the **[CoinGecko API](https://www.coingecko.com/e
 
 ## 🚀 Overview
 
-**Crypto Tracker** allows users to explore, monitor, and stay updated with cryptocurrency prices in real time — all through a sleek, responsive SwiftUI interface.  
+**CoinPilot** allows users to explore, monitor, and stay updated with cryptocurrency prices in real time — all through a sleek, responsive SwiftUI interface.  
 It’s designed with a strong architectural foundation to ensure smooth data flow, high maintainability, and ease of testing.
 
 ---
@@ -75,4 +75,5 @@ This unidirectional data flow ensures smooth reactive updates, debounced UI rend
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/Sagar5426/Crypto-Tracker.git
+   git clone https://github.com/Sagar5426/CoinPilot.git
+   ```

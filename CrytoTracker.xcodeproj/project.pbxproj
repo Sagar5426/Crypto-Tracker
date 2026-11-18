@@ -58,7 +58,7 @@
 		459ED37A30A8B9E900116335 /* LocalFileManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 459ED33F30A8B9E900116335 /* LocalFileManager.swift */; };
 		459ED37B30A8B9E900116335 /* NetworkingManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 459ED34030A8B9E900116335 /* NetworkingManager.swift */; };
 		459ED37C30A8B9E900116335 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 459ED34330A8B9E900116335 /* ContentView.swift */; };
-		459ED37D30A8B9E900116335 /* CrytoTrackerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 459ED34430A8B9E900116335 /* CrytoTrackerApp.swift */; };
+		459ED37D30A8B9E900116335 /* CoinPilotApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 459ED34430A8B9E900116335 /* CoinPilotApp.swift */; };
 		459ED38230A8C13900116335 /* PortfolioCoinRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 459ED38130A8C13900116335 /* PortfolioCoinRowView.swift */; };
 		459ED38430A8F63600116335 /* HeaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 459ED38330A8F63600116335 /* HeaderView.swift */; };
 		459ED38730A9032E00116335 /* SwiftfulUI in Frameworks */ = {isa = PBXBuildFile; productRef = 459ED38630A9032E00116335 /* SwiftfulUI */; };
@@ -127,7 +127,7 @@
 		459ED34030A8B9E900116335 /* NetworkingManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkingManager.swift; sourceTree = "<group>"; };
 		459ED34230A8B9E900116335 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		459ED34330A8B9E900116335 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
-		459ED34430A8B9E900116335 /* CrytoTrackerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CrytoTrackerApp.swift; sourceTree = "<group>"; };
+		459ED34430A8B9E900116335 /* CoinPilotApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoinPilotApp.swift; sourceTree = "<group>"; };
 		459ED34530A8B9E900116335 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		459ED34730A8B9E900116335 /* PortfolioContainer.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = PortfolioContainer.xcdatamodel; sourceTree = "<group>"; };
 		459ED38130A8C13900116335 /* PortfolioCoinRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PortfolioCoinRowView.swift; sourceTree = "<group>"; };
@@ -142,8 +142,8 @@
 		459ED3A830ACEBC500116335 /* TradeBookViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TradeBookViewModel.swift; sourceTree = "<group>"; };
 		459ED3B130ACEEE300116335 /* MarketScreenViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarketScreenViewModel.swift; sourceTree = "<group>"; };
 		459ED3B330ACEFF800116335 /* CoinInvestmentBreakdownViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoinInvestmentBreakdownViewModel.swift; sourceTree = "<group>"; };
-		459ED3B530ACF0D900116335 /* ChartViewModel.swift */ = {isa = PBXFileReference; path = ChartViewModel.swift; sourceTree = "<group>"; };
-		45B438442E894416005778D8 /* CrytoTracker.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CrytoTracker.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		459ED3B530ACF0D900116335 /* ChartViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChartViewModel.swift; sourceTree = "<group>"; };
+		45B438442E894416005778D8 /* CoinPilot.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CoinPilot.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -186,7 +186,7 @@
 			isa = PBXGroup;
 			children = (
 				459ED34630A8B9E900116335 /* CrytoTracker */,
-				45B438442E894416005778D8 /* CrytoTracker.app */,
+				45B438442E894416005778D8 /* CoinPilot.app */,
 			);
 			sourceTree = "<group>";
 		};
@@ -394,7 +394,7 @@
 				459ED34130A8B9E900116335 /* Utilities */,
 				459ED34230A8B9E900116335 /* Assets.xcassets */,
 				459ED34330A8B9E900116335 /* ContentView.swift */,
-				459ED34430A8B9E900116335 /* CrytoTrackerApp.swift */,
+				459ED34430A8B9E900116335 /* CoinPilotApp.swift */,
 				459ED34530A8B9E900116335 /* Info.plist */,
 			);
 			path = CrytoTracker;
@@ -478,7 +478,7 @@
 				459ED38930A9034100116335 /* SwiftfulRouting */,
 			);
 			productName = CrytoTracker;
-			productReference = 45B438442E894416005778D8 /* CrytoTracker.app */;
+			productReference = 45B438442E894416005778D8 /* CoinPilot.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -598,7 +598,7 @@
 				459ED37B30A8B9E900116335 /* NetworkingManager.swift in Sources */,
 				459ED37C30A8B9E900116335 /* ContentView.swift in Sources */,
 				459ED39D30AB8B0100116335 /* ManagePortfolioView.swift in Sources */,
-				459ED37D30A8B9E900116335 /* CrytoTrackerApp.swift in Sources */,
+				459ED37D30A8B9E900116335 /* CoinPilotApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -740,6 +740,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = CrytoTracker/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = CoinPilot;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -751,7 +752,7 @@
 				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.sagar.CrytoTracker;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = CoinPilot;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
 				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
@@ -774,6 +775,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = CrytoTracker/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = CoinPilot;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -785,7 +787,7 @@
 				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.sagar.CrytoTracker;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = CoinPilot;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
 				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;

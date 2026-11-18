@@ -1,6 +1,6 @@
 //
 //  ManagePortfolioView.swift
-//  CrytoTracker
+//  CoinPilot
 //
 //  Created by Antigravity on 17/11/2026.
 //

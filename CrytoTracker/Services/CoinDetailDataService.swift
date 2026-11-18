@@ -1,6 +1,6 @@
 //
 //  CoinDetailDataService.swift
-//  CrytoTracker
+//  CoinPilot
 //
 //  Created by Sagar Jangra on 01/10/2025.
 //

@@ -1,6 +1,6 @@
 //
 //  SettingsView.swift
-//  CrytoTracker
+//  CoinPilot
 //
 //  Created by Sagar Jangra on 03/10/2025.
 //
@@ -248,7 +248,7 @@ extension SettingsView {
                 
                 VStack(alignment: .leading, spacing: 3) {
                     HStack(spacing: 6) {
-                        Text("Crypto Tracker")
+                        Text("CoinPilot")
                             .font(.system(size: 18, weight: .bold, design: .rounded))
                             .foregroundStyle(Color.theme.accent)
                         
@@ -716,7 +716,7 @@ extension SettingsView {
                         .foregroundStyle(Color.theme.accent)
                 }
                 
-                Text("Crypto Tracker does not require account registration, does not collect analytics telemetry, and never uploads your portfolio holdings or trade history to external servers. All personal financial data resides exclusively inside local CoreData storage.")
+                Text("CoinPilot does not require account registration, does not collect analytics telemetry, and never uploads your portfolio holdings or trade history to external servers. All personal financial data resides exclusively inside local CoreData storage.")
                     .font(.footnote)
                     .foregroundStyle(Color.theme.secondaryText)
                     .lineSpacing(2)
@@ -758,7 +758,7 @@ extension SettingsView {
                             .foregroundStyle(Color.theme.accent)
                     }
                     
-                    Text("Cryptocurrency values fluctuate substantially. All data and calculations within Crypto Tracker are provided solely for educational and portfolio simulation purposes, and do not constitute financial, investment, tax, or legal advice.")
+                    Text("Cryptocurrency values fluctuate substantially. All data and calculations within CoinPilot are provided solely for educational and portfolio simulation purposes, and do not constitute financial, investment, tax, or legal advice.")
                         .font(.caption2)
                         .foregroundStyle(Color.theme.secondaryText.opacity(0.8))
                         .lineSpacing(2)

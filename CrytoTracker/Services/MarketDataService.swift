@@ -1,13 +1,13 @@
 //
 //  MarketDataService.swift
-//  CrytoTracker
+//  CoinPilot
 //
 //  Created by Sagar Jangra on 27/09/2025.
 //
 
 //
 //  CoinDataService.swift
-//  CrytoTracker
+//  CoinPilot
 //
 //  Created by Sagar Jangra on 16/09/2025.
 //

@@ -1,6 +1,6 @@
 //
 //  CoinTradeRowView.swift
-//  CrytoTracker
+//  CoinPilot
 //
 
 import SwiftUI

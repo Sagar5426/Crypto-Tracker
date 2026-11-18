@@ -1,6 +1,6 @@
 //
 //  CoinInvestmentCardSection.swift
-//  CrytoTracker
+//  CoinPilot
 //
 //  Created by Antigravity on 15/11/2026.
 //

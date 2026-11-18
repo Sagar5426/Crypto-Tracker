@@ -1,6 +1,6 @@
 //
 //  LaunchView.swift
-//  CryptoTracker
+//  CoinPilot
 //
 //  Created by Sagar Jangra on 04/10/2025.
 //  Refined with Subtle Ambiance, Exact 2s Timing, and Synchronized Waves.
@@ -93,7 +93,7 @@ struct LaunchView: View {
             // 4. Typography & Sleek Progress Section
             VStack(spacing: 16) {
                 // App Branding Title
-                Text("CRYPTO TRACKER")
+                Text("COINPILOT")
                     .font(.system(size: 17, weight: .bold, design: .rounded))
                     .tracking(4.5)
                     .foregroundStyle(Color.launch.accent)
