@@ -85,41 +85,59 @@ Keep track of favorite cryptocurrencies and monitor their market performance in 
   </tr>
 </table>
 
-### ⚙️ Settings, Wallet & Trading Activity
+### ⚙️ Settings
 
-Manage virtual wallet funds, review profit and loss, and access trading history through the settings section.
+Manage app preferences and access key portfolio management features.
+
+<p align="left">
+  <img width="220" alt="Settings" src="https://github.com/user-attachments/assets/94c47c87-cd2c-441d-945d-cc28d2a844d7" />
+</p>
+
+### 💰 Wallet Funds
+
+Manage virtual wallet balances and add funds for simulated cryptocurrency trading.
 
 <table>
   <tr>
-    <td align="center">
-      <img width="220" alt="Settings View 1" src="https://github.com/user-attachments/assets/94c47c87-cd2c-441d-945d-cc28d2a844d7" />
+    <td align="left">
+      <img width="220" alt="Wallet Funds 1" src="https://github.com/user-attachments/assets/ec4c2a42-bf6d-43fc-9ee3-baf22f97dcb0" />
     </td>
-    <td align="center">
-      <img width="220" alt="Settings View 2" src="https://github.com/user-attachments/assets/ec4c2a42-bf6d-43fc-9ee3-baf22f97dcb0" />
-    </td>
-    <td align="center">
-      <img width="220" alt="Settings View 3" src="https://github.com/user-attachments/assets/d65abd7c-4bbc-42c7-84e8-593f1b91a12a" />
+    <td align="left">
+      <img width="220" alt="Wallet Funds 2" src="https://github.com/user-attachments/assets/d65abd7c-4bbc-42c7-84e8-593f1b91a12a" />
     </td>
   </tr>
+</table>
+
+### 📊 Profit & Loss
+
+Monitor overall trading performance, analyse profits and losses, and review portfolio returns.
+
+<table>
   <tr>
-    <td align="center">
-      <img width="220" alt="Settings View 4" src="https://github.com/user-attachments/assets/a27c47d0-b409-4786-87c1-4593dc395b45" />
+    <td align="left">
+      <img width="220" alt="Profit and Loss 1" src="https://github.com/user-attachments/assets/a27c47d0-b409-4786-87c1-4593dc395b45" />
     </td>
-    <td align="center">
-      <img width="220" alt="Settings View 5" src="https://github.com/user-attachments/assets/e8aaaa1f-e3d6-43fc-9eb2-78fb77277763" />
+    <td align="left">
+      <img width="220" alt="Profit and Loss 2" src="https://github.com/user-attachments/assets/e8aaaa1f-e3d6-43fc-9eb2-78fb77277763" />
     </td>
-    <td align="center">
-      <img width="220" alt="Settings View 6" src="https://github.com/user-attachments/assets/f31ddb76-8917-471c-9343-a5b76b4f7a82" />
+    <td align="left">
+      <img width="220" alt="Profit and Loss 3" src="https://github.com/user-attachments/assets/f31ddb76-8917-471c-9343-a5b76b4f7a82" />
     </td>
   </tr>
+</table>
+
+### 📜 Trade Book
+
+Access transaction history and review previous simulated cryptocurrency buy and sell orders.
+
+<table>
   <tr>
-    <td align="center">
-      <img width="220" alt="Settings View 7" src="https://github.com/user-attachments/assets/b29977d8-425a-4eae-9c93-261f3ebc62c5" />
+    <td align="left">
+      <img width="220" alt="Trade Book 1" src="https://github.com/user-attachments/assets/b29977d8-425a-4eae-9c93-261f3ebc62c5" />
     </td>
-    <td align="center">
-      <img width="220" alt="Settings View 8" src="https://github.com/user-attachments/assets/475c2c4a-5c8e-46cc-a395-545c24364f56" />
+    <td align="left">
+      <img width="220" alt="Trade Book 2" src="https://github.com/user-attachments/assets/475c2c4a-5c8e-46cc-a395-545c24364f56" />
     </td>
-    <td></td>
   </tr>
 </table>
 
