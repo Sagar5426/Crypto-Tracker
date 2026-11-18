@@ -39,6 +39,14 @@ View detailed cryptocurrency information, price movements, and individual coin s
   </tr>
 </table>
 
+### 📊 Coin Holding Breakdown
+
+Get a detailed breakdown of individual cryptocurrency holdings and their contribution to the portfolio.
+
+<p align="left">
+  <img width="220" alt="Coin Holding Breakdown" src="https://github.com/user-attachments/assets/c5230a45-dcc8-41f0-82b4-b3264cdcb139" />
+</p>
+
 ### 💼 Portfolio
 
 Track portfolio performance, holdings, invested value, and overall returns.
@@ -57,13 +65,7 @@ Track portfolio performance, holdings, invested value, and overall returns.
   </tr>
 </table>
 
-### 📊 Coin Holding Breakdown
 
-Get a detailed breakdown of individual cryptocurrency holdings and their contribution to the portfolio.
-
-<p align="left">
-  <img width="220" alt="Coin Holding Breakdown" src="https://github.com/user-attachments/assets/c5230a45-dcc8-41f0-82b4-b3264cdcb139" />
-</p>
 
 ### ⭐ Watchlist
 
